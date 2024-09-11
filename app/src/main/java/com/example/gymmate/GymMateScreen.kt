@@ -1,5 +1,7 @@
 package com.example.gymmate
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,7 +53,12 @@ import androidx.compose.ui.window.PopupProperties
 import com.example.gymmate.data.Exercise
 import com.example.gymmate.data.ExerciseDAO
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.time.Instant
+import java.util.Date
+import java.util.Locale
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GymMateScreen(exerciseDao: ExerciseDAO) {
@@ -82,7 +89,7 @@ fun GymMateScreen(exerciseDao: ExerciseDAO) {
                     sets = 0,
                     reps = 0,
                     weight = 0f,
-                    date = ""
+                    date = SimpleDateFormat("HH:mm:aa, dd/MM", Locale.ENGLISH).format(Date.from(Instant.now()))
                 )
                 scope.launch {
                     exerciseDao.insertExercise(newExercise)
