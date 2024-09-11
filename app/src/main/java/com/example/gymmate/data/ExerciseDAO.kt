@@ -13,8 +13,8 @@ interface ExerciseDAO {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertExercise(exercise: Exercise)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertExercises(exercises: List<Exercise>)
+//    @Insert(onConflict = OnConflictStrategy.REPLACE)
+//    suspend fun insertExercises(exercises: List<Exercise>)
 
     @Update
     suspend fun updateExercise(exercise: Exercise)

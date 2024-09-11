@@ -1,6 +1,7 @@
 package com.example.gymmate
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,13 +14,23 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,81 +41,82 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import com.example.gymmate.data.Exercise
 import com.example.gymmate.data.ExerciseDAO
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GymMateScreen(exerciseDao: ExerciseDAO) {
     var exercises by remember { mutableStateOf(listOf<Exercise>()) }
+
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         scope.launch {
             exerciseDao.getAllExercises().collect { list ->
                 exercises = list
-            }
-        }
-    }
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
+                if (exercises.isNotEmpty()) {
 
-    ) {
-        PerfilCard()
-        Spacer(modifier = Modifier.height(16.dp)) // Espaço entre o PerfilCard e a lista
-
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp) // Margem em volta da lista
-        ) {
-            items(exercises) { exercise ->
-                ExerciseCard(exercise = exercise, exerciseDao = exerciseDao)
+                }
             }
         }
     }
 
-}
+    Scaffold(
+        floatingActionButton = {
+            GymMateFAB {
+                val newExerciseId =
+                    (exercises.maxByOrNull { it.id.toInt() }?.id?.toIntOrNull() ?: 0) + 1
 
-@Composable
-fun PerfilCard() {
-    var trainerName by remember { mutableStateOf("") }
-    var trainerWeight by remember { mutableStateOf("") }
-    var trainerHeight by remember { mutableStateOf("") }
+                val newExercise = Exercise(
+                    id = newExerciseId.toString(),
+                    exerciseName = "New Exercise",
+                    sets = 0,
+                    reps = 0,
+                    weight = 0f,
+                    date = ""
+                )
+                scope.launch {
+                    exerciseDao.insertExercise(newExercise)
+                }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp, horizontal = 12.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            TextField(
-                value = trainerName,
-                onValueChange = { trainerName = it },
-                label = { Text("Trainer Name") },
-                modifier = Modifier.fillMaxWidth()
-            )
+            }
+        },
+        content = { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "gymmate",
+                    style = MaterialTheme.typography.headlineLarge,
+                    modifier = Modifier.padding(18.dp),
+                    fontSize = 18.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                ) {
+                    items(exercises) { exercise ->
+                        ExerciseCard(exercise = exercise, exerciseDao = exerciseDao)
+                    }
+                }
+            }
 
-            TextField(
-                value = trainerWeight,
-                onValueChange = { trainerWeight = it },
-                label = { Text("Trainer Weight (kg)") },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            )
-
-            TextField(
-                value = trainerHeight,
-                onValueChange = { trainerHeight = it },
-                label = { Text("Trainer Height (cm)") },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            )
         }
-    }
+    )
 }
 
 @Composable
@@ -115,6 +127,7 @@ fun ExerciseCard(exercise: Exercise, exerciseDao: ExerciseDAO) {
     var exerciseReps by remember { mutableStateOf(exercise.reps.toString()) }
     var exerciseWeight by remember { mutableStateOf(exercise.weight.toString()) }
     var exerciseDate by remember { mutableStateOf(exercise.date) }
+    var showDialog by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
@@ -138,6 +151,28 @@ fun ExerciseCard(exercise: Exercise, exerciseDao: ExerciseDAO) {
                         .weight(1f)
                 )
                 Text(text = exercise.date)
+
+                IconButton(
+                    onClick = { showDialog = true }) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(22.dp),
+                        contentDescription = "Delete Exercise"
+                    )
+                }
+
+                if (showDialog) {
+                    ConfirmDeleteDialog(
+                        onConfirm = {
+                            scope.launch {
+                                exerciseDao.deleteExercise(exercise)
+                            }
+                            showDialog = false
+                        },
+                        onDismiss = { showDialog = false }
+                    )
+                }
                 Icon(
                     imageVector = if (isExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
                     contentDescription = if (isExpanded) "Show less" else "Show more"
@@ -147,11 +182,15 @@ fun ExerciseCard(exercise: Exercise, exerciseDao: ExerciseDAO) {
 
             if (isExpanded) {
                 Spacer(modifier = Modifier.padding(top = 16.dp))
-                TextField(
+                OutlinedTextField(
                     value = exerciseName,
                     onValueChange = { exerciseName = it },
                     label = { Text("Exercise Name") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Done
+                    )
                 )
 
                 // Campo para o número de sets
@@ -205,6 +244,10 @@ fun ExerciseCard(exercise: Exercise, exerciseDao: ExerciseDAO) {
                         scope.launch {
                             exerciseDao.updateExercise(updatedExercise)
                         }
+                        scope.launch {
+                            exerciseDao.getAllExercises()
+                        }
+                        isExpanded = false
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -216,3 +259,41 @@ fun ExerciseCard(exercise: Exercise, exerciseDao: ExerciseDAO) {
         }
     }
 }
+
+
+@Composable
+fun GymMateFAB(onFabClick: () -> Unit) {
+    FloatingActionButton(
+        onClick = onFabClick,
+        modifier = Modifier.size(56.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Add,
+            contentDescription = "Adicionar Exercício"
+        )
+    }
+}
+
+@Composable
+fun ConfirmDeleteDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Confirm Deletion") },
+        text = { Text("Are you sure you want to delete this exercise?") },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+

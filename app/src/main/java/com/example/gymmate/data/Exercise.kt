@@ -8,7 +8,7 @@ import androidx.room.PrimaryKey
 data class Exercise(
     @PrimaryKey
     @ColumnInfo("Key")
-    val id: Int,
+    val id: String,
     val exerciseName: String,
     val sets: Int,
     val reps: Int,
