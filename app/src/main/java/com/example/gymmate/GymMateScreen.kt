@@ -3,7 +3,6 @@ package com.example.gymmate
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,14 +22,12 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -43,23 +40,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import com.example.gymmate.data.Exercise
 import com.example.gymmate.data.ExerciseDAO
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.Date
-import java.util.Locale
 
 @RequiresApi(Build.VERSION_CODES.O)
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GymMateScreen(exerciseDao: ExerciseDAO) {
     var exercises by remember { mutableStateOf(listOf<Exercise>()) }
@@ -70,9 +62,7 @@ fun GymMateScreen(exerciseDao: ExerciseDAO) {
         scope.launch {
             exerciseDao.getAllExercises().collect { list ->
                 exercises = list
-                if (exercises.isNotEmpty()) {
 
-                }
             }
         }
     }
@@ -89,12 +79,14 @@ fun GymMateScreen(exerciseDao: ExerciseDAO) {
                     sets = 0,
                     reps = 0,
                     weight = 0f,
-                    date = SimpleDateFormat("HH:mm:aa, dd/MM", Locale.ENGLISH).format(Date.from(Instant.now()))
+                    date = SimpleDateFormat(
+                        "dd/MM",
+                        java.util.Locale.ENGLISH
+                    ).format(Date.from(Instant.now()))
                 )
                 scope.launch {
                     exerciseDao.insertExercise(newExercise)
                 }
-
             }
         },
         content = { paddingValues ->
@@ -129,14 +121,24 @@ fun GymMateScreen(exerciseDao: ExerciseDAO) {
 @Composable
 fun ExerciseCard(exercise: Exercise, exerciseDao: ExerciseDAO) {
     var isExpanded by remember { mutableStateOf(false) }
+    var showDialog by remember { mutableStateOf(false) }
+
+    val scope = rememberCoroutineScope()
+
     var exerciseName by remember { mutableStateOf(exercise.exerciseName) }
     var exerciseSets by remember { mutableStateOf(exercise.sets.toString()) }
     var exerciseReps by remember { mutableStateOf(exercise.reps.toString()) }
     var exerciseWeight by remember { mutableStateOf(exercise.weight.toString()) }
     var exerciseDate by remember { mutableStateOf(exercise.date) }
-    var showDialog by remember { mutableStateOf(false) }
 
-    val scope = rememberCoroutineScope()
+    LaunchedEffect(exercise) {
+        exerciseName = exercise.exerciseName
+        exerciseSets = exercise.sets.toString()
+        exerciseReps = exercise.reps.toString()
+        exerciseWeight = exercise.weight.toString()
+        exerciseDate = exercise.date
+    }
+
 
     Card(
         modifier = Modifier
