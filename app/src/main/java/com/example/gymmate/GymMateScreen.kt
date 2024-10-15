@@ -33,6 +33,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,6 +45,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.gymmate.data.Exercise
 import com.example.gymmate.data.ExerciseDAO
 import kotlinx.coroutines.launch
@@ -54,18 +56,11 @@ import java.util.Date
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun GymMateScreen(exerciseDao: ExerciseDAO) {
-    var exercises by remember { mutableStateOf(listOf<Exercise>()) }
+    val gymMateViewModel: GymMateViewModel = viewModel(
+        factory = GymMateViewModelFactory(exerciseDao)
+    )
+    val exercises by gymMateViewModel.exercises.collectAsState()
 
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(Unit) {
-        scope.launch {
-            exerciseDao.getAllExercises().collect { list ->
-                exercises = list
-
-            }
-        }
-    }
 
     Scaffold(
         floatingActionButton = {
@@ -84,9 +79,7 @@ fun GymMateScreen(exerciseDao: ExerciseDAO) {
                         java.util.Locale.ENGLISH
                     ).format(Date.from(Instant.now()))
                 )
-                scope.launch {
-                    exerciseDao.insertExercise(newExercise)
-                }
+                gymMateViewModel.addExercise(newExercise)
             }
         },
         content = { paddingValues ->
@@ -109,7 +102,14 @@ fun GymMateScreen(exerciseDao: ExerciseDAO) {
                         .padding(16.dp)
                 ) {
                     items(exercises) { exercise ->
-                        ExerciseCard(exercise = exercise, exerciseDao = exerciseDao)
+                        ExerciseCard(
+                            exercise = exercise,
+                            onUpdateExercise = {updatedExercise ->
+                                gymMateViewModel.updateExercise(updatedExercise)
+                            },
+                                onDeleteExercise = { exerciseToDelete ->
+                                    gymMateViewModel.deleteExercise(exerciseToDelete)
+                                })
                     }
                 }
             }
@@ -119,11 +119,12 @@ fun GymMateScreen(exerciseDao: ExerciseDAO) {
 }
 
 @Composable
-fun ExerciseCard(exercise: Exercise, exerciseDao: ExerciseDAO) {
+fun ExerciseCard(exercise: Exercise,
+                 onUpdateExercise: (Exercise) -> Unit,
+                 onDeleteExercise: (Exercise) -> Unit) {
     var isExpanded by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
 
-    val scope = rememberCoroutineScope()
 
     var exerciseName by remember { mutableStateOf(exercise.exerciseName) }
     var exerciseSets by remember { mutableStateOf(exercise.sets.toString()) }
@@ -174,9 +175,7 @@ fun ExerciseCard(exercise: Exercise, exerciseDao: ExerciseDAO) {
                 if (showDialog) {
                     ConfirmDeleteDialog(
                         onConfirm = {
-                            scope.launch {
-                                exerciseDao.deleteExercise(exercise)
-                            }
+                            onDeleteExercise(exercise)
                             showDialog = false
                         },
                         onDismiss = { showDialog = false }
@@ -250,12 +249,10 @@ fun ExerciseCard(exercise: Exercise, exerciseDao: ExerciseDAO) {
                         )
 
                         // Salva no banco de dados
-                        scope.launch {
-                            exerciseDao.updateExercise(updatedExercise)
-                        }
-                        scope.launch {
-                            exerciseDao.getAllExercises()
-                        }
+                        onUpdateExercise(updatedExercise)
+//                        scope.launch {
+//                            exerciseDao.getAllExercises()
+//                        }
                         isExpanded = false
                     },
                     modifier = Modifier

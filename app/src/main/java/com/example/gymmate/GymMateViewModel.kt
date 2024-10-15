@@ -1,6 +1,7 @@
 package com.example.gymmate
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.gymmate.data.Exercise
 import com.example.gymmate.data.ExerciseDAO
@@ -45,5 +46,15 @@ class GymMateViewModel(private val exerciseDAO: ExerciseDAO): ViewModel() {
         }
     }
 
+}
+
+class GymMateViewModelFactory(private val exerciseDAO: ExerciseDAO) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(GymMateViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return GymMateViewModel(exerciseDAO) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
 }
 
