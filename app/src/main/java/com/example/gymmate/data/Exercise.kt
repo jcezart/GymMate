@@ -13,6 +13,7 @@ data class Exercise(
     val sets: Int,
     val reps: Int,
     val weight: Float,
-    val date: String
+    val date: String,
+    val category: String
 
 )
