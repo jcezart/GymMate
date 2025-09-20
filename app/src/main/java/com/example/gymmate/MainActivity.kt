@@ -7,8 +7,9 @@ import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import com.example.gymmate.data.ExerciseDAO
-import com.example.gymmate.data.GymMateDataBase
+import com.example.gymmate.data.local.dao.ExerciseDAO
+import com.example.gymmate.data.local.db.GymMateDataBase
+import com.example.gymmate.presentation.screen.GymMateScreen
 import com.example.gymmate.ui.theme.GymMateTheme
 
 class MainActivity : ComponentActivity() {

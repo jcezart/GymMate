@@ -1,4 +1,4 @@
-package com.example.gymmate
+package com.example.gymmate.presentation.component
 
 
 import androidx.compose.foundation.background

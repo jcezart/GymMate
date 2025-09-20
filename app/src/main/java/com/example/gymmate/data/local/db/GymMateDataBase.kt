@@ -1,4 +1,4 @@
-package com.example.gymmate.data
+package com.example.gymmate.data.local.db
 
 import android.content.Context
 import androidx.room.Database
@@ -6,11 +6,14 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.gymmate.data.local.dao.ExerciseDAO
+import com.example.gymmate.data.local.entity.CategoryEntity
+import com.example.gymmate.data.local.entity.ExerciseEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-@Database(entities = [Exercise::class, Category::class], version = 6, exportSchema = false)
+@Database(entities = [ExerciseEntity::class, CategoryEntity::class], version = 6, exportSchema = false)
 abstract class GymMateDataBase : RoomDatabase() {
 
     abstract fun exerciseDao(): ExerciseDAO
@@ -27,15 +30,15 @@ abstract class GymMateDataBase : RoomDatabase() {
                     "app_database"
                 )
                     .addMigrations(MIGRATION_4_5, MIGRATION_5_6)
-                    .addCallback(object : RoomDatabase.Callback() {
+                    .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)
                             // Insere categorias iniciais ao criar o banco
                             CoroutineScope(Dispatchers.IO).launch {
                                 val dao = getDatabase(context).exerciseDao()
-                                dao.insertCategory(Category("Workout A"))
-                                dao.insertCategory(Category("Workout B"))
-                                dao.insertCategory(Category("Workout C"))
+                                dao.insertCategory(CategoryEntity("Workout A"))
+                                dao.insertCategory(CategoryEntity("Workout B"))
+                                dao.insertCategory(CategoryEntity("Workout C"))
                             }
                         }
                     })

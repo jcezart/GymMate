@@ -1,4 +1,4 @@
-package com.example.gymmate.data
+package com.example.gymmate.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Delete
@@ -6,28 +6,30 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import com.example.gymmate.data.local.entity.CategoryEntity
+import com.example.gymmate.data.local.entity.ExerciseEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ExerciseDAO {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertExercise(exercise: Exercise)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) //OnConflictStrategy.Companion.REPLACE
+    suspend fun insertExercise(exercise: ExerciseEntity)
 
     @Update
-    suspend fun updateExercise(exercise: Exercise)
+    suspend fun updateExercise(exercise: ExerciseEntity)
 
     @Delete
-    suspend fun deleteExercise(exercise: Exercise)
+    suspend fun deleteExercise(exercise: ExerciseEntity)
 
     @Query("SELECT * FROM exercises ORDER BY exerciseName ASC")
-    fun getAllExercises(): Flow<List<Exercise>>
+    fun getAllExercises(): Flow<List<ExerciseEntity>>
 
     // Novos métodos para Category
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertCategory(category: Category)
+    @Insert(onConflict = OnConflictStrategy.IGNORE) // OnConflictStrategy.Companion.IGNORE
+    suspend fun insertCategory(category: CategoryEntity)
 
     @Query("SELECT * FROM categories ORDER BY name ASC")
-    fun getAllCategories(): Flow<List<Category>>
+    fun getAllCategories(): Flow<List<CategoryEntity>>
 
     @Query("DELETE FROM categories WHERE name = :name")
     suspend fun deleteCategory(name: String)

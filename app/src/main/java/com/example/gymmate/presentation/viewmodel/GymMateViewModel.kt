@@ -1,21 +1,21 @@
-package com.example.gymmate
+package com.example.gymmate.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.gymmate.data.Category
-import com.example.gymmate.data.Exercise
-import com.example.gymmate.data.ExerciseDAO
+import com.example.gymmate.data.local.dao.ExerciseDAO
+import com.example.gymmate.data.local.entity.CategoryEntity
+import com.example.gymmate.data.local.entity.ExerciseEntity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class GymMateViewModel(private val exerciseDAO: ExerciseDAO) : ViewModel() {
-    private val _exercises = MutableStateFlow<List<Exercise>>(emptyList())
-    val exercises: StateFlow<List<Exercise>> get() = _exercises
+    private val _exercises = MutableStateFlow<List<ExerciseEntity>>(emptyList())
+    val exercises: StateFlow<List<ExerciseEntity>> get() = _exercises
 
-    private val _categories = MutableStateFlow<List<Category>>(emptyList())
-    val categories: StateFlow<List<Category>> get() = _categories
+    private val _categories = MutableStateFlow<List<CategoryEntity>>(emptyList())
+    val categories: StateFlow<List<CategoryEntity>> get() = _categories
 
     init {
         viewModelScope.launch {
@@ -27,33 +27,33 @@ class GymMateViewModel(private val exerciseDAO: ExerciseDAO) : ViewModel() {
             exerciseDAO.getAllCategories().collect { categoryList ->
                 _categories.value = categoryList
                 if (categoryList.isEmpty()) {
-                    exerciseDAO.insertCategory(Category("Workout A"))
-                    exerciseDAO.insertCategory(Category("Workout B"))
-                    exerciseDAO.insertCategory(Category("Workout C"))
+                    exerciseDAO.insertCategory(CategoryEntity("Workout A"))
+                    exerciseDAO.insertCategory(CategoryEntity("Workout B"))
+                    exerciseDAO.insertCategory(CategoryEntity("Workout C"))
                 }
             }
         }
     }
 
-    fun addExercise(exercise: Exercise) {
+    fun addExercise(exercise: ExerciseEntity) {
         viewModelScope.launch {
             exerciseDAO.insertExercise(exercise)
         }
     }
 
-    fun updateExercise(exercise: Exercise) {
+    fun updateExercise(exercise: ExerciseEntity) {
         viewModelScope.launch {
             exerciseDAO.updateExercise(exercise)
         }
     }
 
-    fun deleteExercise(exercise: Exercise) {
+    fun deleteExercise(exercise: ExerciseEntity) {
         viewModelScope.launch {
             exerciseDAO.deleteExercise(exercise)
         }
     }
 
-    fun addCategory(category: Category) {
+    fun addCategory(category: CategoryEntity) {
         viewModelScope.launch {
             exerciseDAO.insertCategory(category)
         }
@@ -63,7 +63,7 @@ class GymMateViewModel(private val exerciseDAO: ExerciseDAO) : ViewModel() {
         viewModelScope.launch {
             exerciseDAO.updateExercisesCategory(oldName, newName)
             exerciseDAO.deleteCategory(oldName)
-            exerciseDAO.insertCategory(Category(newName))
+            exerciseDAO.insertCategory(CategoryEntity(newName))
         }
     }
 

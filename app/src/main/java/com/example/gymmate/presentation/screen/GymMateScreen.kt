@@ -1,4 +1,4 @@
-package com.example.gymmate
+package com.example.gymmate.presentation.screen
 
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -52,12 +52,16 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.gymmate.data.Category
-import com.example.gymmate.data.Exercise
-import com.example.gymmate.data.ExerciseDAO
+import com.example.gymmate.data.local.dao.ExerciseDAO
+import com.example.gymmate.data.local.entity.CategoryEntity
+import com.example.gymmate.data.local.entity.ExerciseEntity
+import com.example.gymmate.presentation.component.CustomTooltip
+import com.example.gymmate.presentation.viewmodel.GymMateViewModel
+import com.example.gymmate.presentation.viewmodel.GymMateViewModelFactory
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.Date
+import java.util.Locale
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -91,13 +95,13 @@ fun GymMateScreen(exerciseDao: ExerciseDAO) {
                 GymMateFAB {
                     val newExerciseId =
                         (exercises.maxByOrNull { it.id.toInt() }?.id?.toIntOrNull() ?: 0) + 1
-                    val newExercise = Exercise(
+                    val newExercise = ExerciseEntity(
                         id = newExerciseId.toString(),
                         exerciseName = "",
                         sets = 0,
                         reps = 0,
                         weight = 0f,
-                        date = SimpleDateFormat("dd/MM", java.util.Locale.ENGLISH).format(Date.from(Instant.now())),
+                        date = SimpleDateFormat("dd/MM", Locale.ENGLISH).format(Date.from(Instant.now())),
                         category = selectedCategory
                     )
                     gymMateViewModel.addExercise(newExercise)
@@ -207,7 +211,7 @@ fun GymMateScreen(exerciseDao: ExerciseDAO) {
             AddCategoryDialog(
                 onConfirm = { newCategoryName ->
                     if (newCategoryName.isNotBlank() && newCategoryName !in categories.map { it.name }) {
-                        gymMateViewModel.addCategory(Category(newCategoryName))
+                        gymMateViewModel.addCategory(CategoryEntity(newCategoryName))
                         selectedCategory = newCategoryName
                     }
                     showCategoryDialog = false
@@ -256,9 +260,9 @@ fun GymMateScreen(exerciseDao: ExerciseDAO) {
 
 @Composable
 fun ExerciseCard(
-    exercise: Exercise,
-    onUpdateExercise: (Exercise) -> Unit,
-    onDeleteExercise: (Exercise) -> Unit
+    exercise: ExerciseEntity,
+    onUpdateExercise: (ExerciseEntity) -> Unit,
+    onDeleteExercise: (ExerciseEntity) -> Unit
 ) {
     var isExpanded by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
@@ -371,7 +375,7 @@ fun ExerciseCard(
 
                 Button(
                     onClick = {
-                        val updatedExercise = exercise.copy(
+                        val updatedExercise: ExerciseEntity = exercise.copy(
                             exerciseName = exerciseName,
                             sets = exerciseSets.toIntOrNull() ?: 0,
                             reps = exerciseReps.toIntOrNull() ?: 0,

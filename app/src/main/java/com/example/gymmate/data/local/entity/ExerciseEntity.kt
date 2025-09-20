@@ -1,11 +1,11 @@
-package com.example.gymmate.data
+package com.example.gymmate.data.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 @Entity(tableName = "exercises")
-data class Exercise(
+data class ExerciseEntity(
     @PrimaryKey
     @ColumnInfo("Key")
     val id: String,
@@ -15,5 +15,4 @@ data class Exercise(
     val weight: Float,
     val date: String,
     val category: String
-
 )
