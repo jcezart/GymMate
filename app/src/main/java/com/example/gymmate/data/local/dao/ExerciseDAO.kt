@@ -24,7 +24,6 @@ interface ExerciseDAO {
     @Query("SELECT * FROM exercises ORDER BY exerciseName ASC")
     fun getAllExercises(): Flow<List<ExerciseEntity>>
 
-    // Novos métodos para Category
     @Insert(onConflict = OnConflictStrategy.IGNORE) // OnConflictStrategy.Companion.IGNORE
     suspend fun insertCategory(category: CategoryEntity)
 

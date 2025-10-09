@@ -8,9 +8,7 @@ import com.example.gymmate.domain.repository.CategoryRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-class CategoryRepositoryImpl(
-    private val dao: ExerciseDAO
-) : CategoryRepository {
+class CategoryRepositoryImpl(private val dao: ExerciseDAO) : CategoryRepository {
 
     override fun getAllCategories(): Flow<List<Category>> =
         dao.getAllCategories().map { list -> list.map { it.toDomain() } }

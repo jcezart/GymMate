@@ -28,7 +28,6 @@ class MainActivity : ComponentActivity() {
         exerciseDAO = db.exerciseDao()
 
 
-
         setContent {
             GymMateTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
