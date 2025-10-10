@@ -1,4 +1,4 @@
-package com.example.gymmate.data.local.db
+package com.example.gymmate.data.datasource.local.db
 
 import android.content.Context
 import androidx.room.Database
@@ -6,9 +6,9 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.example.gymmate.data.local.dao.ExerciseDAO
-import com.example.gymmate.data.local.entity.CategoryEntity
-import com.example.gymmate.data.local.entity.ExerciseEntity
+import com.example.gymmate.data.datasource.local.dao.ExerciseDAO
+import com.example.gymmate.data.datasource.local.entity.CategoryEntity
+import com.example.gymmate.data.datasource.local.entity.ExerciseEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

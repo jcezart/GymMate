@@ -1,6 +1,6 @@
 package com.example.gymmate.data.mapper
 
-import com.example.gymmate.data.local.entity.ExerciseEntity
+import com.example.gymmate.data.datasource.local.entity.ExerciseEntity
 import com.example.gymmate.domain.model.Exercise
 
 fun ExerciseEntity.toDomain(): Exercise =
@@ -24,3 +24,6 @@ fun Exercise.toEntity(): ExerciseEntity =
         date = date,
         category = category
     )
+
+
+

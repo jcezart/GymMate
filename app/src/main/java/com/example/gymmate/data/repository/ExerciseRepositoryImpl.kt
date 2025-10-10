@@ -1,6 +1,6 @@
 package com.example.gymmate.data.repository
 
-import com.example.gymmate.data.local.dao.ExerciseDAO
+import com.example.gymmate.data.datasource.local.dao.ExerciseDAO
 import com.example.gymmate.data.mapper.toDomain
 import com.example.gymmate.data.mapper.toEntity
 import com.example.gymmate.domain.model.Exercise
