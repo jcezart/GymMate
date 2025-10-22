@@ -28,10 +28,10 @@ interface ExerciseDAO {
     @Insert(onConflict = OnConflictStrategy.IGNORE) // OnConflictStrategy.Companion.IGNORE
     suspend fun insertCategory(category: CategoryEntity)
 
-    @Query("SELECT * FROM categories ORDER BY name ASC")
+    @Query("SELECT * FROM categories ORDER BY nameDb ASC")
     fun getAllCategories(): Flow<List<CategoryEntity>>
 
-    @Query("DELETE FROM categories WHERE name = :name")
+    @Query("DELETE FROM categories WHERE nameDb = :name")
     suspend fun deleteCategory(name: String)
 
     @Query("UPDATE exercises SET category = :newCategory WHERE category = :oldCategory")
