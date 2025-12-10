@@ -1,4 +1,4 @@
-package com.example.gymmate.data.local.dao
+package com.example.gymmate.data.datasource.local.dao
 
 import androidx.room.Dao
 import androidx.room.Delete
@@ -6,8 +6,8 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import com.example.gymmate.data.local.entity.CategoryEntity
-import com.example.gymmate.data.local.entity.ExerciseEntity
+import com.example.gymmate.data.datasource.local.entity.CategoryEntity
+import com.example.gymmate.data.datasource.local.entity.ExerciseEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -24,13 +24,14 @@ interface ExerciseDAO {
     @Query("SELECT * FROM exercises ORDER BY exerciseName ASC")
     fun getAllExercises(): Flow<List<ExerciseEntity>>
 
+    // Novos métodos para Category
     @Insert(onConflict = OnConflictStrategy.IGNORE) // OnConflictStrategy.Companion.IGNORE
     suspend fun insertCategory(category: CategoryEntity)
 
-    @Query("SELECT * FROM categories ORDER BY name ASC")
+    @Query("SELECT * FROM categories ORDER BY nameDb ASC")
     fun getAllCategories(): Flow<List<CategoryEntity>>
 
-    @Query("DELETE FROM categories WHERE name = :name")
+    @Query("DELETE FROM categories WHERE nameDb = :name")
     suspend fun deleteCategory(name: String)
 
     @Query("UPDATE exercises SET category = :newCategory WHERE category = :oldCategory")

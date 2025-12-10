@@ -1,86 +1,217 @@
 package com.example.gymmate.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.gymmate.data.local.dao.ExerciseDAO
-import com.example.gymmate.data.local.entity.CategoryEntity
-import com.example.gymmate.data.local.entity.ExerciseEntity
+import com.example.gymmate.domain.model.Category
+import com.example.gymmate.domain.repository.CategoryRepository
+import com.example.gymmate.domain.repository.ExerciseRepository
+import com.example.gymmate.presentation.GymMateAction
+import com.example.gymmate.presentation.GymMateUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
-class GymMateViewModel(private val exerciseDAO: ExerciseDAO) : ViewModel() {
-    private val _exercises = MutableStateFlow<List<ExerciseEntity>>(emptyList())
-    val exercises: StateFlow<List<ExerciseEntity>> get() = _exercises
+class GymMateViewModel(
+    private val categoryRepository: CategoryRepository,
+    private val exerciseRepository: ExerciseRepository
+) : ViewModel() {
 
-    private val _categories = MutableStateFlow<List<CategoryEntity>>(emptyList())
-    val categories: StateFlow<List<CategoryEntity>> get() = _categories
+    private val _uiState = MutableStateFlow(GymMateUiState(isLoading = true))
+    val uiState: StateFlow<GymMateUiState> = _uiState.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            exerciseDAO.getAllExercises().collect { exerciseList ->
-                _exercises.value = exerciseList
-            }
+        loadInitialData()
+    }
+
+    class FilmesState(
+        val isLoading: Boolean = false,
+        val filmes: List<String> = emptyList(),
+        val errorMessage: String? = null
+    )
+    private fun getFilmes(){
+        val loading = true
+        // getFilmesAPi()
+
+    }
+
+    fun dispatch(action: GymMateAction) {
+        when (action) {
+            is GymMateAction.LoadInitial -> loadInitialData()
+            is GymMateAction.SelectCategory -> handleSelectCategory(action.name)
+            is GymMateAction.AddExercise -> handleAddExercise(action.exercise)
+            is GymMateAction.UpdateExercise -> handleUpdateExercise(action.exercise)
+            is GymMateAction.DeleteExercise -> handleDeleteExercise(action.exercise)
+            is GymMateAction.AddCategory -> handleAddCategory(action.name)
+            is GymMateAction.RenameCategory -> handleRenameCategory(action.oldName, action.newName)
+            is GymMateAction.DeleteCategory -> handleDeleteCategory(action.name)
+            is GymMateAction.DismissError -> handleDismissError()
         }
+    }
+
+    private fun loadInitialData() {
         viewModelScope.launch {
-            exerciseDAO.getAllCategories().collect { categoryList ->
-                _categories.value = categoryList
-                if (categoryList.isEmpty()) {
-                    exerciseDAO.insertCategory(CategoryEntity("Workout A"))
-                    exerciseDAO.insertCategory(CategoryEntity("Workout B"))
-                    exerciseDAO.insertCategory(CategoryEntity("Workout C"))
+            try {
+                combine(
+                    categoryRepository.getAllCategories(),
+                    exerciseRepository.getAllExercises()
+                ) { categories, exercises ->
+                    Pair(categories, exercises)
+                }.collect { (categories, exercises) ->
+                    // Se não houver categorias, criar as padrão
+                    if (categories.isEmpty()) {
+                        categoryRepository.addCategory(Category("Workout A"))
+                        categoryRepository.addCategory(Category("Workout B"))
+                        categoryRepository.addCategory(Category("Workout C"))
+                        return@collect
+                    }
+
+                    val selectedCategory = _uiState.value.selectedCategory
+                        ?: categories.firstOrNull()?.name
+
+                    // Filtrar exercícios pela categoria selecionada
+                    val filteredExercises = selectedCategory?.let { category ->
+                        exercises.filter { it.category == category }
+                    } ?: emptyList()
+
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        categories = categories,
+                        selectedCategory = selectedCategory,
+                        exercises = filteredExercises,
+                        errorMessage = null
+                    )
                 }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = "Failed to load data: ${e.message}"
+                )
             }
         }
     }
 
-    fun addExercise(exercise: ExerciseEntity) {
+    private fun handleSelectCategory(name: String) {
         viewModelScope.launch {
-            exerciseDAO.insertExercise(exercise)
+            try {
+                val allExercises = exerciseRepository.getAllExercises()
+                allExercises.collect { exercises ->
+                    val filteredExercises = exercises.filter { it.category == name }
+                    _uiState.value = _uiState.value.copy(
+                        selectedCategory = name,
+                        exercises = filteredExercises
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Failed to select category: ${e.message}"
+                )
+            }
         }
     }
 
-    fun updateExercise(exercise: ExerciseEntity) {
+    private fun handleAddExercise(exercise: com.example.gymmate.domain.model.Exercise) {
         viewModelScope.launch {
-            exerciseDAO.updateExercise(exercise)
+            try {
+                exerciseRepository.addExercise(exercise)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Failed to add exercise: ${e.message}"
+                )
+            }
         }
     }
 
-    fun deleteExercise(exercise: ExerciseEntity) {
+    private fun handleUpdateExercise(exercise: com.example.gymmate.domain.model.Exercise) {
         viewModelScope.launch {
-            exerciseDAO.deleteExercise(exercise)
+            try {
+                exerciseRepository.updateExercise(exercise)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Failed to update exercise: ${e.message}"
+                )
+            }
         }
     }
 
-    fun addCategory(category: CategoryEntity) {
+    private fun handleDeleteExercise(exercise: com.example.gymmate.domain.model.Exercise) {
         viewModelScope.launch {
-            exerciseDAO.insertCategory(category)
+            try {
+                exerciseRepository.deleteExercise(exercise)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Failed to delete exercise: ${e.message}"
+                )
+            }
         }
     }
 
-    fun renameCategory(oldName: String, newName: String) {
+    private fun handleAddCategory(name: String) {
         viewModelScope.launch {
-            exerciseDAO.updateExercisesCategory(oldName, newName)
-            exerciseDAO.deleteCategory(oldName)
-            exerciseDAO.insertCategory(CategoryEntity(newName))
+            try {
+                categoryRepository.addCategory(Category(name))
+                // Após adicionar, selecionar a nova categoria
+                _uiState.value = _uiState.value.copy(
+                    selectedCategory = name
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Failed to add category: ${e.message}"
+                )
+            }
         }
     }
 
-    fun deleteCategory(categoryName: String) {
+    private fun handleRenameCategory(oldName: String, newName: String) {
         viewModelScope.launch {
-            exerciseDAO.deleteExercisesByCategory(categoryName)
-            exerciseDAO.deleteCategory(categoryName)
+            try {
+                exerciseRepository.moveExercisesToCategory(oldName, newName)
+                categoryRepository.deleteCategory(oldName)
+                categoryRepository.addCategory(Category(newName))
+
+                // Se a categoria renomeada estava selecionada, atualizar para o novo nome
+                if (_uiState.value.selectedCategory == oldName) {
+                    _uiState.value = _uiState.value.copy(
+                        selectedCategory = newName
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Failed to rename category: ${e.message}"
+                )
+            }
         }
     }
-}
 
-class GymMateViewModelFactory(private val exerciseDAO: ExerciseDAO) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(GymMateViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return GymMateViewModel(exerciseDAO) as T
+    private fun handleDeleteCategory(name: String) {
+        viewModelScope.launch {
+            try {
+                exerciseRepository.deleteExercisesByCategory(name)
+                categoryRepository.deleteCategory(name)
+
+                // Se a categoria deletada estava selecionada, selecionar a primeira disponível
+                if (_uiState.value.selectedCategory == name) {
+                    val newSelectedCategory = _uiState.value.categories
+                        .firstOrNull { it.name != name }?.name
+
+                    _uiState.value = _uiState.value.copy(
+                        selectedCategory = newSelectedCategory,
+                        exercises = emptyList()
+                    )
+
+                    // Se houver nova categoria selecionada, carregar seus exercícios
+                    newSelectedCategory?.let { handleSelectCategory(it) }
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Failed to delete category: ${e.message}"
+                )
+            }
         }
-        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+
+    private fun handleDismissError() {
+        _uiState.value = _uiState.value.copy(errorMessage = null)
     }
 }

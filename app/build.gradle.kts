@@ -55,6 +55,7 @@ dependencies {
 
     //Room database
     implementation(libs.androidx.room.runtime)
+    implementation(libs.lifecycle.viewmodel.ktx)
     annotationProcessor(libs.androidx.room.compiler)
     ksp(libs.androidx.room.compiler)
 
@@ -65,6 +66,9 @@ dependencies {
     androidTestImplementation(libs.androidx.junit.v115)
     androidTestImplementation(libs.androidx.espresso.core.v351)
     testImplementation(libs.androidx.room.testing)
+
+    implementation("io.insert-koin:koin-android:3.5.0")
+    implementation("io.insert-koin:koin-androidx-compose:3.5.0")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

@@ -39,7 +39,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,60 +50,71 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.gymmate.data.local.dao.ExerciseDAO
-import com.example.gymmate.data.local.entity.CategoryEntity
-import com.example.gymmate.data.local.entity.ExerciseEntity
+import com.example.gymmate.domain.model.Category
+import com.example.gymmate.domain.model.Exercise
+import com.example.gymmate.presentation.GymMateAction
+import com.example.gymmate.presentation.GymMateUiState
 import com.example.gymmate.presentation.component.CustomTooltip
-import com.example.gymmate.presentation.viewmodel.GymMateViewModel
-import com.example.gymmate.presentation.viewmodel.GymMateViewModelFactory
 import java.text.SimpleDateFormat
-import java.time.Instant
 import java.util.Date
 import java.util.Locale
 
+
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun GymMateScreen(exerciseDao: ExerciseDAO) {
-    val gymMateViewModel: GymMateViewModel = viewModel(
-        factory = GymMateViewModelFactory(exerciseDao)
-    )
-    val exercises by gymMateViewModel.exercises.collectAsState()
-    val categories by gymMateViewModel.categories.collectAsState()
-    var selectedCategory by remember { mutableStateOf("Workout A") }
+fun GymMateScreen(
+    state: GymMateUiState,
+    onAction: (GymMateAction) -> Unit
+) {
     var showCategoryDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var categoryToDelete by remember { mutableStateOf("") }
     var categoryToRename by remember { mutableStateOf("") }
-    var newCategoryName by remember { mutableStateOf("") }
-    val filteredExercises = exercises.filter { it.category == selectedCategory }
 
-    // Garante que selectedCategory seja válida quando as categorias mudam
-    LaunchedEffect(categories) {
-        if (categories.isNotEmpty()) {
-            if (!categories.map { it.name }.contains(selectedCategory)) {
-                selectedCategory = categories.first().name
+    // Exibir erro se houver
+    state.errorMessage?.let { error ->
+        AlertDialog(
+            onDismissRequest = { onAction(GymMateAction.DismissError) },
+            title = { Text("Error") },
+            text = { Text(error) },
+            confirmButton = {
+                TextButton(onClick = { onAction(GymMateAction.DismissError) }) {
+                    Text("OK")
+                }
             }
+        )
+    }
+
+    if (state.isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("Loading...")
         }
+        return
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             floatingActionButton = {
                 GymMateFAB {
-                    val newExerciseId =
-                        (exercises.maxByOrNull { it.id.toInt() }?.id?.toIntOrNull() ?: 0) + 1
-                    val newExercise = ExerciseEntity(
-                        id = newExerciseId.toString(),
-                        exerciseName = "",
-                        sets = 0,
-                        reps = 0,
-                        weight = 0f,
-                        date = SimpleDateFormat("dd/MM", Locale.ENGLISH).format(Date.from(Instant.now())),
-                        category = selectedCategory
-                    )
-                    gymMateViewModel.addExercise(newExercise)
+                    state.selectedCategory?.let { selectedCategory ->
+                        val allExercises = state.exercises
+                        val newExerciseId =
+                            (allExercises.maxByOrNull { it.id.toIntOrNull() ?: 0 }?.id?.toIntOrNull() ?: 0) + 1
+                        val newExercise = Exercise(
+                            id = newExerciseId.toString(),
+                            exerciseName = "",
+                            sets = 0,
+                            reps = 0,
+                            weight = 0f,
+                            date = SimpleDateFormat("dd/MM", Locale.ENGLISH).format(Date()),
+                            category = selectedCategory
+                        )
+                        onAction(GymMateAction.AddExercise(newExercise))
+                    }
                 }
             },
             content = { paddingValues ->
@@ -123,11 +133,14 @@ fun GymMateScreen(exerciseDao: ExerciseDAO) {
                     Spacer(modifier = Modifier.height(8.dp))
 
                     LazyRow(modifier = Modifier.padding(18.dp)) {
-                        items(categories) { category ->
+                        items(state.categories) { category ->
                             Button(
-                                onClick = { selectedCategory = category.name },
+                                onClick = { onAction(GymMateAction.SelectCategory(category.name)) },
                                 modifier = Modifier.padding(1.dp),
-                                colors = if (category.name == selectedCategory) ButtonDefaults.buttonColors(containerColor = Color.DarkGray) else ButtonDefaults.buttonColors()
+                                colors = if (category.name == state.selectedCategory)
+                                    ButtonDefaults.buttonColors()
+                                else
+                                    ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -140,7 +153,6 @@ fun GymMateScreen(exerciseDao: ExerciseDAO) {
                                     IconButton(
                                         onClick = {
                                             categoryToRename = category.name
-                                            newCategoryName = category.name
                                             showRenameDialog = true
                                         },
                                         modifier = Modifier
@@ -154,7 +166,7 @@ fun GymMateScreen(exerciseDao: ExerciseDAO) {
                                             modifier = Modifier.size(16.dp)
                                         )
                                     }
-                                    if (categories.size > 1) {
+                                    if (state.categories.size > 1) {
                                         IconButton(
                                             onClick = {
                                                 categoryToDelete = category.name
@@ -191,14 +203,14 @@ fun GymMateScreen(exerciseDao: ExerciseDAO) {
                             .fillMaxSize()
                             .padding(16.dp)
                     ) {
-                        items(filteredExercises) { exercise ->
+                        items(state.exercises) { exercise ->
                             ExerciseCard(
                                 exercise = exercise,
                                 onUpdateExercise = { updatedExercise ->
-                                    gymMateViewModel.updateExercise(updatedExercise)
+                                    onAction(GymMateAction.UpdateExercise(updatedExercise))
                                 },
                                 onDeleteExercise = { exerciseToDelete ->
-                                    gymMateViewModel.deleteExercise(exerciseToDelete)
+                                    onAction(GymMateAction.DeleteExercise(exerciseToDelete))
                                 }
                             )
                         }
@@ -210,9 +222,8 @@ fun GymMateScreen(exerciseDao: ExerciseDAO) {
         if (showCategoryDialog) {
             AddCategoryDialog(
                 onConfirm = { newCategoryName ->
-                    if (newCategoryName.isNotBlank() && newCategoryName !in categories.map { it.name }) {
-                        gymMateViewModel.addCategory(CategoryEntity(newCategoryName))
-                        selectedCategory = newCategoryName
+                    if (newCategoryName.isNotBlank() && newCategoryName !in state.categories.map { it.name }) {
+                        onAction(GymMateAction.AddCategory(newCategoryName))
                     }
                     showCategoryDialog = false
                 },
@@ -225,8 +236,7 @@ fun GymMateScreen(exerciseDao: ExerciseDAO) {
                 title = "Delete Category",
                 message = "Are you sure you want to delete '$categoryToDelete'? This will also delete all associated exercises.",
                 onConfirm = {
-                    gymMateViewModel.deleteCategory(categoryToDelete)
-                    if (selectedCategory == categoryToDelete) selectedCategory = categories.first().name
+                    onAction(GymMateAction.DeleteCategory(categoryToDelete))
                     showDeleteDialog = false
                 },
                 onDismiss = { showDeleteDialog = false }
@@ -237,9 +247,8 @@ fun GymMateScreen(exerciseDao: ExerciseDAO) {
             RenameCategoryDialog(
                 currentName = categoryToRename,
                 onConfirm = { newName ->
-                    if (newName.isNotBlank() && newName !in categories.map { it.name }) {
-                        gymMateViewModel.renameCategory(categoryToRename, newName)
-                        if (selectedCategory == categoryToRename) selectedCategory = newName
+                    if (newName.isNotBlank() && newName !in state.categories.map { it.name }) {
+                        onAction(GymMateAction.RenameCategory(categoryToRename, newName))
                     }
                     showRenameDialog = false
                 },
@@ -247,7 +256,7 @@ fun GymMateScreen(exerciseDao: ExerciseDAO) {
             )
         }
 
-        if (exercises.isEmpty()) {
+        if (state.exercises.isEmpty()) {
             CustomTooltip(
                 text = "Add an exercise to start",
                 modifier = Modifier
@@ -260,9 +269,12 @@ fun GymMateScreen(exerciseDao: ExerciseDAO) {
 
 @Composable
 fun ExerciseCard(
-    exercise: ExerciseEntity,
-    onUpdateExercise: (ExerciseEntity) -> Unit,
-    onDeleteExercise: (ExerciseEntity) -> Unit
+    // exercise: ExerciseEntity,
+    exercise: Exercise,
+    // onUpdateExercise: (ExerciseEntity) -> Unit,
+    onUpdateExercise: (Exercise) -> Unit,
+    //onDeleteExercise: (ExerciseEntity) -> Unit
+    onDeleteExercise: (Exercise) -> Unit
 ) {
     var isExpanded by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
@@ -375,7 +387,14 @@ fun ExerciseCard(
 
                 Button(
                     onClick = {
-                        val updatedExercise: ExerciseEntity = exercise.copy(
+//                        val updatedExercise: ExerciseEntity = exercise.copy(
+//                            exerciseName = exerciseName,
+//                            sets = exerciseSets.toIntOrNull() ?: 0,
+//                            reps = exerciseReps.toIntOrNull() ?: 0,
+//                            weight = exerciseWeight.toFloatOrNull() ?: 0f,
+//                            date = exerciseDate
+//                        )
+                        val updatedExercise: Exercise = exercise.copy(
                             exerciseName = exerciseName,
                             sets = exerciseSets.toIntOrNull() ?: 0,
                             reps = exerciseReps.toIntOrNull() ?: 0,

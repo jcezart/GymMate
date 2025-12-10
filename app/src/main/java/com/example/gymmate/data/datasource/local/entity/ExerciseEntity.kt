@@ -1,4 +1,4 @@
-package com.example.gymmate.data.local.entity
+package com.example.gymmate.data.datasource.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
@@ -15,4 +15,5 @@ data class ExerciseEntity(
     val weight: Float,
     val date: String,
     val category: String
+
 )
