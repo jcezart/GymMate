@@ -58,6 +58,7 @@ import com.example.gymmate.presentation.component.CustomTooltip
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -101,11 +102,8 @@ fun GymMateScreen(
             floatingActionButton = {
                 GymMateFAB {
                     state.selectedCategory?.let { selectedCategory ->
-                        val allExercises = state.exercises
-                        val newExerciseId =
-                            (allExercises.maxByOrNull { it.id.toIntOrNull() ?: 0 }?.id?.toIntOrNull() ?: 0) + 1
                         val newExercise = Exercise(
-                            id = newExerciseId.toString(),
+                            id = UUID.randomUUID().toString(),
                             exerciseName = "",
                             sets = 0,
                             reps = 0,

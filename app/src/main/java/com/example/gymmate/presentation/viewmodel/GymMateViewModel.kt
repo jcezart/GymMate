@@ -7,10 +7,12 @@ import com.example.gymmate.domain.repository.CategoryRepository
 import com.example.gymmate.domain.repository.ExerciseRepository
 import com.example.gymmate.presentation.GymMateAction
 import com.example.gymmate.presentation.GymMateUiState
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class GymMateViewModel(
@@ -23,17 +25,6 @@ class GymMateViewModel(
 
     init {
         loadInitialData()
-    }
-
-    class FilmesState(
-        val isLoading: Boolean = false,
-        val filmes: List<String> = emptyList(),
-        val errorMessage: String? = null
-    )
-    private fun getFilmes(){
-        val loading = true
-        // getFilmesAPi()
-
     }
 
     fun dispatch(action: GymMateAction) {
@@ -92,23 +83,20 @@ class GymMateViewModel(
         }
     }
 
+    private var selectCategoryJob: Job? = null
     private fun handleSelectCategory(name: String) {
-        viewModelScope.launch {
-            try {
-                val allExercises = exerciseRepository.getAllExercises()
-                allExercises.collect { exercises ->
-                    val filteredExercises = exercises.filter { it.category == name }
+        selectCategoryJob?.cancel()
+        selectCategoryJob = viewModelScope.launch {
+            exerciseRepository.getAllExercises().map { exercises ->
+                exercises.filter { it.category == name }}
+                .collect { filteredExercises ->
                     _uiState.value = _uiState.value.copy(
                         selectedCategory = name,
-                        exercises = filteredExercises
+                        exercises =  filteredExercises
                     )
                 }
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    errorMessage = "Failed to select category: ${e.message}"
-                )
-            }
         }
+
     }
 
     private fun handleAddExercise(exercise: com.example.gymmate.domain.model.Exercise) {
