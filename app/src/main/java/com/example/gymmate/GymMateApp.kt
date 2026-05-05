@@ -1,20 +1,11 @@
 package com.example.gymmate
 
 import android.app.Application
-import com.example.gymmate.di.appModule
-import org.koin.android.ext.koin.androidContext
-import org.koin.android.ext.koin.androidLogger
-import org.koin.core.context.startKoin
-import org.koin.core.logger.Level
 
 class GymMateApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        startKoin {
-            androidLogger(Level.ERROR)
-            androidContext(this@GymMateApp)
-            modules(appModule)
-        }
+        // TODO: Inicialize o Koin aqui e registre os módulos
     }
 }

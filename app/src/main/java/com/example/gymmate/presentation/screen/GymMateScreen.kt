@@ -58,6 +58,7 @@ import com.example.gymmate.presentation.component.CustomTooltip
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -67,10 +68,15 @@ fun GymMateScreen(
     onAction: (GymMateAction) -> Unit
 ) {
     var showCategoryDialog by remember { mutableStateOf(false) }
+    val showCategoryDialog1 = false
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var categoryToDelete by remember { mutableStateOf("") }
     var categoryToRename by remember { mutableStateOf("") }
+
+    fun julioEstudou(){
+        showRenameDialog = true
+    }
 
     // Exibir erro se houver
     state.errorMessage?.let { error ->
@@ -101,11 +107,8 @@ fun GymMateScreen(
             floatingActionButton = {
                 GymMateFAB {
                     state.selectedCategory?.let { selectedCategory ->
-                        val allExercises = state.exercises
-                        val newExerciseId =
-                            (allExercises.maxByOrNull { it.id.toIntOrNull() ?: 0 }?.id?.toIntOrNull() ?: 0) + 1
                         val newExercise = Exercise(
-                            id = newExerciseId.toString(),
+                            id = UUID.randomUUID().toString(),
                             exerciseName = "",
                             sets = 0,
                             reps = 0,

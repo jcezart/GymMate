@@ -2,15 +2,20 @@ package com.example.gymmate.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.gymmate.data.datasource.local.dao.ExerciseDAO
+import com.example.gymmate.data.repository.ExerciseRepositoryImpl
 import com.example.gymmate.domain.model.Category
+import com.example.gymmate.domain.model.Exercise
 import com.example.gymmate.domain.repository.CategoryRepository
 import com.example.gymmate.domain.repository.ExerciseRepository
 import com.example.gymmate.presentation.GymMateAction
 import com.example.gymmate.presentation.GymMateUiState
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class GymMateViewModel(
@@ -43,7 +48,7 @@ class GymMateViewModel(
             is GymMateAction.AddExercise -> handleAddExercise(action.exercise)
             is GymMateAction.UpdateExercise -> handleUpdateExercise(action.exercise)
             is GymMateAction.DeleteExercise -> handleDeleteExercise(action.exercise)
-            is GymMateAction.AddCategory -> handleAddCategory(action.name)
+            is GymMateAction.AddCategory ->{ handleAddCategory(action.name)}
             is GymMateAction.RenameCategory -> handleRenameCategory(action.oldName, action.newName)
             is GymMateAction.DeleteCategory -> handleDeleteCategory(action.name)
             is GymMateAction.DismissError -> handleDismissError()
@@ -91,27 +96,23 @@ class GymMateViewModel(
             }
         }
     }
-
+    private var selectCategoryJob: Job? = null
     private fun handleSelectCategory(name: String) {
-        viewModelScope.launch {
-            try {
-                val allExercises = exerciseRepository.getAllExercises()
-                allExercises.collect { exercises ->
-                    val filteredExercises = exercises.filter { it.category == name }
+        selectCategoryJob?.cancel()
+        selectCategoryJob = viewModelScope.launch {
+            exerciseRepository.getAllExercises().map { exercises ->
+                exercises.filter { it.category == name }}
+                .collect { filteredExercises ->
                     _uiState.value = _uiState.value.copy(
                         selectedCategory = name,
-                        exercises = filteredExercises
+                        exercises =  filteredExercises
                     )
-                }
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    errorMessage = "Failed to select category: ${e.message}"
-                )
             }
         }
+
     }
 
-    private fun handleAddExercise(exercise: com.example.gymmate.domain.model.Exercise) {
+    private fun handleAddExercise(exercise: Exercise) {
         viewModelScope.launch {
             try {
                 exerciseRepository.addExercise(exercise)
@@ -123,7 +124,7 @@ class GymMateViewModel(
         }
     }
 
-    private fun handleUpdateExercise(exercise: com.example.gymmate.domain.model.Exercise) {
+    private fun handleUpdateExercise(exercise: Exercise) {
         viewModelScope.launch {
             try {
                 exerciseRepository.updateExercise(exercise)
@@ -151,7 +152,6 @@ class GymMateViewModel(
         viewModelScope.launch {
             try {
                 categoryRepository.addCategory(Category(name))
-                // Após adicionar, selecionar a nova categoria
                 _uiState.value = _uiState.value.copy(
                     selectedCategory = name
                 )

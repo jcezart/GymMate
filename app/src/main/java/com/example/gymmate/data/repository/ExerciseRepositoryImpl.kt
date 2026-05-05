@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class ExerciseRepositoryImpl(
-    private val dao: ExerciseDAO
+    private val dao: ExerciseDAO,
 ) : ExerciseRepository {
 
     override fun getAllExercises(): Flow<List<Exercise>> =

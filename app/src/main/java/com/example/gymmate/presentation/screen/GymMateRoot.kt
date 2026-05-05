@@ -11,7 +11,6 @@ import com.example.gymmate.domain.model.Exercise
 import com.example.gymmate.presentation.GymMateAction
 import com.example.gymmate.presentation.GymMateUiState
 import com.example.gymmate.presentation.viewmodel.GymMateViewModel
-import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -19,7 +18,8 @@ import java.util.Locale
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun GymMateRoot(
-    viewModel: GymMateViewModel = koinViewModel()
+    // TODO: Injete o GymMateViewModel via Koin aqui
+    viewModel: GymMateViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
