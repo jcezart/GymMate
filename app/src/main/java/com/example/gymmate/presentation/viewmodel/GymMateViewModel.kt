@@ -2,10 +2,7 @@ package com.example.gymmate.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.gymmate.data.datasource.local.dao.ExerciseDAO
-import com.example.gymmate.data.repository.ExerciseRepositoryImpl
 import com.example.gymmate.domain.model.Category
-import com.example.gymmate.domain.model.Exercise
 import com.example.gymmate.domain.repository.CategoryRepository
 import com.example.gymmate.domain.repository.ExerciseRepository
 import com.example.gymmate.presentation.GymMateAction
@@ -30,17 +27,6 @@ class GymMateViewModel(
         loadInitialData()
     }
 
-    class FilmesState(
-        val isLoading: Boolean = false,
-        val filmes: List<String> = emptyList(),
-        val errorMessage: String? = null
-    )
-    private fun getFilmes(){
-        val loading = true
-        // getFilmesAPi()
-
-    }
-
     fun dispatch(action: GymMateAction) {
         when (action) {
             is GymMateAction.LoadInitial -> loadInitialData()
@@ -48,7 +34,7 @@ class GymMateViewModel(
             is GymMateAction.AddExercise -> handleAddExercise(action.exercise)
             is GymMateAction.UpdateExercise -> handleUpdateExercise(action.exercise)
             is GymMateAction.DeleteExercise -> handleDeleteExercise(action.exercise)
-            is GymMateAction.AddCategory ->{ handleAddCategory(action.name)}
+            is GymMateAction.AddCategory -> handleAddCategory(action.name)
             is GymMateAction.RenameCategory -> handleRenameCategory(action.oldName, action.newName)
             is GymMateAction.DeleteCategory -> handleDeleteCategory(action.name)
             is GymMateAction.DismissError -> handleDismissError()
@@ -96,6 +82,7 @@ class GymMateViewModel(
             }
         }
     }
+
     private var selectCategoryJob: Job? = null
     private fun handleSelectCategory(name: String) {
         selectCategoryJob?.cancel()
@@ -107,12 +94,12 @@ class GymMateViewModel(
                         selectedCategory = name,
                         exercises =  filteredExercises
                     )
-            }
+                }
         }
 
     }
 
-    private fun handleAddExercise(exercise: Exercise) {
+    private fun handleAddExercise(exercise: com.example.gymmate.domain.model.Exercise) {
         viewModelScope.launch {
             try {
                 exerciseRepository.addExercise(exercise)
@@ -124,7 +111,7 @@ class GymMateViewModel(
         }
     }
 
-    private fun handleUpdateExercise(exercise: Exercise) {
+    private fun handleUpdateExercise(exercise: com.example.gymmate.domain.model.Exercise) {
         viewModelScope.launch {
             try {
                 exerciseRepository.updateExercise(exercise)
@@ -152,6 +139,7 @@ class GymMateViewModel(
         viewModelScope.launch {
             try {
                 categoryRepository.addCategory(Category(name))
+                // Após adicionar, selecionar a nova categoria
                 _uiState.value = _uiState.value.copy(
                     selectedCategory = name
                 )
