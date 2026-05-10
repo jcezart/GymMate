@@ -19,8 +19,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             GymMateTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    // TODO: Passe o ViewModel para o GymMateRoot após configurar o Koin
-                    // GymMateRoot()
+                     GymMateRoot()
                 }
             }
         }
