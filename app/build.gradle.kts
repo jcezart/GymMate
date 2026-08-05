@@ -34,17 +34,17 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        //sourceCompatibility = JavaVersion.VERSION_1_8
+        //targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+
     }
     kotlinOptions {
 
     }
     buildFeatures {
         compose = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
     }
     packaging {
         resources {
@@ -55,7 +55,8 @@ android {
 
 kotlin {
     compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_1_8)
+        //jvmTarget.set(JvmTarget.JVM_1_8)
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
@@ -68,6 +69,7 @@ dependencies {
 
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.guava)
+    implementation(libs.compose.material.icons.core)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
