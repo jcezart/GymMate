@@ -2,7 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
-    id("com.google.devtools.ksp") version "2.0.20-1.0.24"
+    alias(libs.plugins.ksp)
+    //id("com.google.devtools.ksp") version "2.0.20-1.0.24"
 }
 
 android {
@@ -56,23 +57,25 @@ dependencies {
     //Room database
     implementation(libs.androidx.room.runtime)
     implementation(libs.lifecycle.viewmodel.ktx)
-    annotationProcessor(libs.androidx.room.compiler)
     ksp(libs.androidx.room.compiler)
 
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.guava)
 
     testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit.v115)
-    androidTestImplementation(libs.androidx.espresso.core.v351)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.room.testing)
+    androidTestImplementation(libs.androidx.ui.test.junit4)
 
-    implementation("io.insert-koin:koin-android:3.5.0")
-    implementation("io.insert-koin:koin-androidx-compose:3.5.0")
+    //implementation("io.insert-koin:koin-android:3.5.0")
+    //implementation("io.insert-koin:koin-androidx-compose:3.5.0")
+    implementation(libs.koin.android)
+    implementation(libs.koin.compose)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
@@ -80,11 +83,6 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }

@@ -7,7 +7,9 @@ import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.gymmate.presentation.screen.GymMateRoot
+import com.example.gymmate.presentation.viewmodel.GymMateViewModel
 import com.example.gymmate.ui.theme.GymMateTheme
 
 class MainActivity : ComponentActivity() {

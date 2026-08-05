@@ -1,4 +1,3 @@
-
 package com.example.gymmate.di
 
 import com.example.gymmate.data.datasource.local.dao.ExerciseDAO
@@ -12,18 +11,27 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
+//    GymMateViewModel depende de Repository.
+//    RepositoryImpl depende de DAO.
+//    DAO depende de Database.
+//    Database depende de Context.
+//    Koin cria/conecta tudo.
+
 val appModule = module {
-    // Database
+    // como cria o GymMateDataBase?
+     // chamando getDatabase(context)
     single {
         GymMateDataBase.getDatabase(androidContext())
     }
 
-    // DAO
+    //como criar o ExerciseDAO?
+     //pega o banco e chama o exerciseDao()
     single<ExerciseDAO> {
         get<GymMateDataBase>().exerciseDao()
     }
 
-    // Repositories
+    //como criar o ExerciseRepository?
+     //cria a implementacao, passando o exerciseDAO
     single<ExerciseRepository> {
         ExerciseRepositoryImpl(dao = get())
     }
@@ -32,11 +40,14 @@ val appModule = module {
         CategoryRepositoryImpl(dao = get())
     }
 
-    // ViewModels
+    //como criar o GymMateViewModel?
+     //passando category e exerciseRepository
     viewModel {
         GymMateViewModel(
             categoryRepository = get(),
             exerciseRepository = get()
         )
     }
+
+
 }
