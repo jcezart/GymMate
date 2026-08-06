@@ -3,6 +3,7 @@ package com.example.gymmate.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gymmate.domain.model.Category
+import com.example.gymmate.domain.model.Exercise
 import com.example.gymmate.domain.repository.CategoryRepository
 import com.example.gymmate.domain.repository.ExerciseRepository
 import com.example.gymmate.presentation.GymMateAction
@@ -33,6 +34,7 @@ class GymMateViewModel(
             is GymMateAction.SelectCategory -> handleSelectCategory(action.name)
             is GymMateAction.AddExercise -> handleAddExercise(action.exercise)
             is GymMateAction.UpdateExercise -> handleUpdateExercise(action.exercise)
+            is GymMateAction.ReorderExercises -> handleReorderExercises(action.exercises)
             is GymMateAction.DeleteExercise -> handleDeleteExercise(action.exercise)
             is GymMateAction.AddCategory -> handleAddCategory(action.name)
             is GymMateAction.RenameCategory -> handleRenameCategory(action.oldName, action.newName)
@@ -118,6 +120,26 @@ class GymMateViewModel(
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     errorMessage = "Failed to update exercise: ${e.message}"
+                )
+            }
+        }
+    }
+
+    private fun handleReorderExercises(exercises: List<Exercise>) {
+        viewModelScope.launch {
+            try {
+                val reorderedExercises = exercises.mapIndexed { index, exercise ->
+                    exercise.copy(position = index)
+                }
+
+                _uiState.value = _uiState.value.copy(
+                    exercises = reorderedExercises
+                )
+
+                exerciseRepository.updateExercises(reorderedExercises)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Failed to reorder exercises: ${e.message}"
                 )
             }
         }

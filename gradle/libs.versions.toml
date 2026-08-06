@@ -12,6 +12,7 @@ composeBom = "2026.06.01"
 roomCompiler = "2.8.4"
 koin = "4.2.2"
 ksp = "2.3.10"
+reorderable = "3.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -39,6 +40,7 @@ koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
 koin-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koin" }
 compose-material-icons-core = { module = "androidx.compose.material:material-icons-core" }
 compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended"}
+reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

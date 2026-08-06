@@ -11,7 +11,8 @@ fun ExerciseEntity.toDomain(): Exercise =
         reps = reps,
         weight = weight,
         date = date,
-        category = category
+        category = category,
+        position = position
     )
 
 fun Exercise.toEntity(): ExerciseEntity =
@@ -22,5 +23,6 @@ fun Exercise.toEntity(): ExerciseEntity =
         reps = reps,
         weight = weight,
         date = date,
-        category = category
+        category = category,
+        position = position
     )

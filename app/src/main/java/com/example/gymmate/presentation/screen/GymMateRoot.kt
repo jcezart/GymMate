@@ -8,24 +8,30 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.gymmate.domain.model.Category
 import com.example.gymmate.domain.model.Exercise
-import com.example.gymmate.presentation.GymMateAction
 import com.example.gymmate.presentation.GymMateUiState
 import com.example.gymmate.presentation.viewmodel.GymMateViewModel
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.example.gymmate.presentation.timer.RestTimerAction
+import com.example.gymmate.presentation.timer.RestTimerUiState
+import com.example.gymmate.presentation.timer.RestTimerViewModel
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun GymMateRoot(
-    viewModel: GymMateViewModel = koinViewModel()
+    viewModel: GymMateViewModel = koinViewModel(),
+    restTimerViewModel: RestTimerViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val timerState by restTimerViewModel.uiState.collectAsState()
 
     GymMateScreen(
         state = uiState,
-        onAction = { action -> viewModel.dispatch(action) }
+        timerState = timerState,
+        onAction = viewModel::dispatch,
+        onTimerAction = restTimerViewModel::dispatch
     )
 }
 
@@ -67,6 +73,8 @@ fun GymMateRootPreview() {
 
     GymMateScreen(
         state = fakeState,
-        onAction = { /* No-op for preview */ }
+        timerState = RestTimerUiState(),
+        onAction = {},
+        onTimerAction = {}
     )
 }

@@ -3,6 +3,7 @@ package com.example.gymmate.presentation.screen
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -50,7 +51,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.gymmate.domain.model.Category
 import com.example.gymmate.domain.model.Exercise
 import com.example.gymmate.presentation.GymMateAction
 import com.example.gymmate.presentation.GymMateUiState
@@ -60,13 +60,21 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 import com.example.gymmate.presentation.component.RestTimerBar
-
+import com.example.gymmate.presentation.timer.RestTimerAction
+import com.example.gymmate.presentation.timer.RestTimerUiState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.lazy.rememberLazyListState
+import sh.calvin.reorderable.rememberReorderableLazyListState
+import androidx.compose.material.icons.filled.DragHandle
+import sh.calvin.reorderable.ReorderableItem
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun GymMateScreen(
     state: GymMateUiState,
-    onAction: (GymMateAction) -> Unit
+    timerState: RestTimerUiState,
+    onAction: (GymMateAction) -> Unit,
+    onTimerAction: (RestTimerAction) -> Unit
 ) {
     var showCategoryDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -74,7 +82,6 @@ fun GymMateScreen(
     var categoryToDelete by remember { mutableStateOf("") }
     var categoryToRename by remember { mutableStateOf("") }
 
-    // Exibir erro se houver
     state.errorMessage?.let { error ->
         AlertDialog(
             onDismissRequest = { onAction(GymMateAction.DismissError) },
@@ -87,6 +94,27 @@ fun GymMateScreen(
             }
         )
     }
+
+    var reorderedExercises by remember(
+        state.selectedCategory,
+        state.exercises
+    ) {
+        mutableStateOf(state.exercises)
+    }
+
+    val lazyListState = rememberLazyListState()
+
+    val reorderableLazyListState =
+        rememberReorderableLazyListState(lazyListState) { from, to ->
+            reorderedExercises = reorderedExercises
+                .toMutableList()
+                .apply {
+                    add(
+                        index = to.index,
+                        element = removeAt(from.index)
+                    )
+                }
+        }
 
     if (state.isLoading) {
         Box(
@@ -102,17 +130,30 @@ fun GymMateScreen(
         Scaffold(
             bottomBar = {
                 RestTimerBar(
-                    time = "01:30",
-                    isRunning = false,
-                    onToggleTimer = {},
-                    onAddThirtySeconds = {},
-                    onSubtractThirtySeconds = {},
-                    onResetTimer = {}
+                    time = timerState.formattedTime,
+                    isRunning = timerState.isRunning,
+                    onToggleTimer = {
+                        onTimerAction(RestTimerAction.ToggleTimer)
+                    },
+                    onSubtractThirtySeconds = {
+                        onTimerAction(RestTimerAction.SubtractThirtySeconds)
+                    },
+                    onAddThirtySeconds = {
+                        onTimerAction(RestTimerAction.AddThirtySeconds)
+                    },
+                    onResetTimer = {
+                        onTimerAction(RestTimerAction.ResetTimer)
+                    }
                 )
             },
             floatingActionButton = {
                 GymMateFAB {
                     state.selectedCategory?.let { selectedCategory ->
+                        val nextPosition = state.exercises
+                            .filter { it.category == selectedCategory }
+                            .maxOfOrNull { it.position }
+                            ?.plus(1) ?: 0
+
                         val newExercise = Exercise(
                             id = UUID.randomUUID().toString(),
                             exerciseName = "",
@@ -120,7 +161,8 @@ fun GymMateScreen(
                             reps = 0,
                             weight = 0f,
                             date = SimpleDateFormat("dd/MM", Locale.ENGLISH).format(Date()),
-                            category = selectedCategory
+                            category = selectedCategory,
+                            position = nextPosition
                         )
                         onAction(GymMateAction.AddExercise(newExercise))
                     }
@@ -210,18 +252,42 @@ fun GymMateScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(16.dp)
+                            .padding(16.dp),
+                        state = lazyListState
                     ) {
-                        items(state.exercises) { exercise ->
-                            ExerciseCard(
-                                exercise = exercise,
-                                onUpdateExercise = { updatedExercise ->
-                                    onAction(GymMateAction.UpdateExercise(updatedExercise))
-                                },
-                                onDeleteExercise = { exerciseToDelete ->
-                                    onAction(GymMateAction.DeleteExercise(exerciseToDelete))
-                                }
-                            )
+                        items(
+                            items = reorderedExercises,
+                            key = { exercise -> exercise.id }
+                        ) { exercise ->
+
+                            ReorderableItem(
+                                reorderableLazyListState,
+                                key = exercise.id
+                            ) { _ ->
+
+                                ExerciseCard(
+                                    exercise = exercise,
+                                    onUpdateExercise = { updatedExercise ->
+                                        onAction(
+                                            GymMateAction.UpdateExercise(updatedExercise)
+                                        )
+                                    },
+                                    onDeleteExercise = { exerciseToDelete ->
+                                        onAction(
+                                            GymMateAction.DeleteExercise(exerciseToDelete)
+                                        )
+                                    },
+                                    dragHandleModifier = Modifier.draggableHandle(
+                                        onDragStopped = {
+                                            onAction(
+                                                GymMateAction.ReorderExercises(
+                                                    reorderedExercises
+                                                )
+                                            )
+                                        }
+                                    )
+                                )
+                            }
                         }
                     }
                 }
@@ -278,15 +344,20 @@ fun GymMateScreen(
 
 @Composable
 fun ExerciseCard(
-    // exercise: ExerciseEntity,
     exercise: Exercise,
-    // onUpdateExercise: (ExerciseEntity) -> Unit,
     onUpdateExercise: (Exercise) -> Unit,
-    //onDeleteExercise: (ExerciseEntity) -> Unit
-    onDeleteExercise: (Exercise) -> Unit
+    onDeleteExercise: (Exercise) -> Unit,
+    dragHandleModifier: Modifier = Modifier
 ) {
-    var isExpanded by remember { mutableStateOf(false) }
+    //var isExpanded by remember { mutableStateOf(false) }
+    var isExpanded by rememberSaveable(exercise.id) {
+        mutableStateOf(exercise.exerciseName.isBlank())
+    }
     var showDialog by remember { mutableStateOf(false) }
+
+    var completedSets by rememberSaveable(exercise.id) {
+        mutableStateOf(0)
+    }
 
     var exerciseName by remember { mutableStateOf(exercise.exerciseName) }
     var exerciseSets by remember { mutableStateOf(if (exercise.sets == 0) "" else exercise.sets.toString()) }
@@ -300,6 +371,10 @@ fun ExerciseCard(
         exerciseReps = if (exercise.reps == 0) "" else exercise.reps.toString()
         exerciseWeight = if (exercise.weight.toDouble() == 0.0) "" else exercise.weight.toString()
         exerciseDate = exercise.date
+    }
+
+    LaunchedEffect(exercise.sets) {
+        completedSets = completedSets.coerceAtMost(exercise.sets)
     }
 
     Card(
@@ -320,6 +395,16 @@ fun ExerciseCard(
                     modifier = Modifier.weight(1f)
                 )
                 Text(text = exercise.date)
+
+                IconButton(
+                    modifier = dragHandleModifier,
+                    onClick = {}
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DragHandle,
+                        contentDescription = "Reorder exercise"
+                    )
+                }
 
                 IconButton(onClick = { showDialog = true }) {
                     Icon(
@@ -343,6 +428,45 @@ fun ExerciseCard(
                     imageVector = if (isExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
                     contentDescription = if (isExpanded) "Show less" else "Show more"
                 )
+            }
+
+            if (exercise.sets > 0) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    TextButton(
+                        onClick = {
+                            completedSets = (completedSets - 1).coerceAtLeast(0)
+                        },
+                        enabled = completedSets > 0
+                    ) {
+                        Text("-")
+                    }
+
+                    Text(
+                        text = "$completedSets of ${exercise.sets} sets",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (completedSets == exercise.sets) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        }
+                    )
+
+                    TextButton(
+                        onClick = {
+                            completedSets =
+                                (completedSets + 1).coerceAtMost(exercise.sets)
+                        },
+                        enabled = completedSets < exercise.sets
+                    ) {
+                        Text("+")
+                    }
+                }
             }
 
             if (isExpanded) {
@@ -396,13 +520,6 @@ fun ExerciseCard(
 
                 Button(
                     onClick = {
-//                        val updatedExercise: ExerciseEntity = exercise.copy(
-//                            exerciseName = exerciseName,
-//                            sets = exerciseSets.toIntOrNull() ?: 0,
-//                            reps = exerciseReps.toIntOrNull() ?: 0,
-//                            weight = exerciseWeight.toFloatOrNull() ?: 0f,
-//                            date = exerciseDate
-//                        )
                         val updatedExercise: Exercise = exercise.copy(
                             exerciseName = exerciseName,
                             sets = exerciseSets.toIntOrNull() ?: 0,

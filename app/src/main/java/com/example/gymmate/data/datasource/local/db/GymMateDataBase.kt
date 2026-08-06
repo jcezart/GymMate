@@ -13,7 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-@Database(entities = [ExerciseEntity::class, CategoryEntity::class], version = 7, exportSchema = false)
+@Database(entities = [ExerciseEntity::class, CategoryEntity::class], version = 8, exportSchema = false)
 abstract class GymMateDataBase : RoomDatabase() {
 
     abstract fun exerciseDao(): ExerciseDAO
@@ -29,7 +29,7 @@ abstract class GymMateDataBase : RoomDatabase() {
                     GymMateDataBase::class.java,
                     "app_database"
                 )
-                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)
@@ -86,6 +86,30 @@ abstract class GymMateDataBase : RoomDatabase() {
 
                 // 4. Renomear nova tabela
                 db.execSQL("ALTER TABLE categories_new RENAME TO categories")
+            }
+        }
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE exercises ADD COLUMN position INTEGER NOT NULL DEFAULT 0"
+                )
+                db.execSQL(
+                    """
+                    UPDATE exercises
+                    SET position = (
+                        SELECT COUNT(*) - 1
+                        FROM exercises AS other
+                        WHERE other.category = exercises.category
+                            AND (
+                                other.exerciseName < exercises.exerciseName
+                                OR (
+                                    other.exerciseName = exercises.exerciseName
+                                    AND other.rowid <= exercises.rowid
+                                )
+                            )
+                    )
+                    """.trimIndent()
+                )
             }
         }
 

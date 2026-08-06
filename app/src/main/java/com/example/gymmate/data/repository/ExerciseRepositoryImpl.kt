@@ -23,6 +23,12 @@ class ExerciseRepositoryImpl(
         dao.updateExercise(exercise.toEntity())
     }
 
+    override suspend fun updateExercises(exercises: List<Exercise>) {
+        dao.updateExercises(
+            exercises.map { it.toEntity() }
+        )
+    }
+
     override suspend fun deleteExercise(exercise: Exercise) {
         dao.deleteExercise(exercise.toEntity())
     }

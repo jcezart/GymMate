@@ -10,6 +10,7 @@ import com.example.gymmate.presentation.viewmodel.GymMateViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
+import com.example.gymmate.presentation.timer.RestTimerViewModel
 
 //    GymMateViewModel depende de Repository.
 //    RepositoryImpl depende de DAO.
@@ -48,6 +49,8 @@ val appModule = module {
             exerciseRepository = get()
         )
     }
-
+    viewModel {
+        RestTimerViewModel()
+    }
 
 }

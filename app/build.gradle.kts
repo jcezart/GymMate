@@ -55,6 +55,7 @@ dependencies {
     implementation(libs.androidx.room.guava)
     implementation(libs.compose.material.icons.core)
     implementation(libs.compose.material.icons.extended)
+    implementation(libs.reorderable)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

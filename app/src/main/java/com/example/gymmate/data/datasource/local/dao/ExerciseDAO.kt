@@ -18,10 +18,13 @@ interface ExerciseDAO {
     @Update
     suspend fun updateExercise(exercise: ExerciseEntity)
 
+    @Update
+    suspend fun updateExercises(exercises: List<ExerciseEntity>)
+
     @Delete
     suspend fun deleteExercise(exercise: ExerciseEntity)
 
-    @Query("SELECT * FROM exercises ORDER BY exerciseName ASC")
+    @Query("SELECT * FROM exercises ORDER BY position ASC")
     fun getAllExercises(): Flow<List<ExerciseEntity>>
 
     // Novos métodos para Category

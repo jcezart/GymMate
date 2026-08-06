@@ -52,7 +52,7 @@ fun RestTimerBar(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = "Descanso",
+                    text = "Rest",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
