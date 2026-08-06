@@ -8,7 +8,7 @@ import com.example.gymmate.domain.repository.CategoryRepository
 import com.example.gymmate.domain.repository.ExerciseRepository
 import com.example.gymmate.presentation.viewmodel.GymMateViewModel
 import org.koin.android.ext.koin.androidContext
-import org.koin.androidx.viewmodel.dsl.viewModel
+import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 //    GymMateViewModel depende de Repository.

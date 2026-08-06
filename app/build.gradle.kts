@@ -1,20 +1,17 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.ksp)
-    //id("com.google.devtools.ksp") version "2.0.20-1.0.24"
 }
 
 android {
     namespace = "com.example.gymmate"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.juliocezar.gymmate"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 3
         versionName = "1.0.2"
 
@@ -34,13 +31,8 @@ android {
         }
     }
     compileOptions {
-        //sourceCompatibility = JavaVersion.VERSION_1_8
-        //targetCompatibility = JavaVersion.VERSION_1_8
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-
-    }
-    kotlinOptions {
 
     }
     buildFeatures {
@@ -53,16 +45,8 @@ android {
     }
 }
 
-kotlin {
-    compilerOptions {
-        //jvmTarget.set(JvmTarget.JVM_1_8)
-        jvmTarget.set(JvmTarget.JVM_17)
-    }
-}
-
 dependencies {
 
-    //Room database
     implementation(libs.androidx.room.runtime)
     implementation(libs.lifecycle.viewmodel.ktx)
     ksp(libs.androidx.room.compiler)
@@ -78,8 +62,6 @@ dependencies {
     testImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.androidx.ui.test.junit4)
 
-    //implementation("io.insert-koin:koin-android:3.5.0")
-    //implementation("io.insert-koin:koin-androidx-compose:3.5.0")
     implementation(libs.koin.android)
     implementation(libs.koin.compose)
 
