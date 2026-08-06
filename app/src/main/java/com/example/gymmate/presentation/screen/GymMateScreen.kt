@@ -59,6 +59,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import com.example.gymmate.presentation.component.RestTimerBar
 
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -99,6 +100,16 @@ fun GymMateScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
+            bottomBar = {
+                RestTimerBar(
+                    time = "01:30",
+                    isRunning = false,
+                    onToggleTimer = {},
+                    onAddThirtySeconds = {},
+                    onSubtractThirtySeconds = {},
+                    onResetTimer = {}
+                )
+            },
             floatingActionButton = {
                 GymMateFAB {
                     state.selectedCategory?.let { selectedCategory ->
@@ -259,7 +270,7 @@ fun GymMateScreen(
                 text = "Add an exercise to start",
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .offset(x = (-60).dp, y = (-80).dp)
+                    .offset(x = (-68).dp, y = (-145).dp)
             )
         }
     }
