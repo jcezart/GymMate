@@ -11,6 +11,10 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 import com.example.gymmate.presentation.timer.RestTimerViewModel
+import com.example.gymmate.data.datasource.local.dao.WorkoutSessionDao
+import com.example.gymmate.data.datasource.local.dao.WorkoutSessionExerciseDao
+import com.example.gymmate.data.repository.WorkoutSessionRepositoryImpl
+import com.example.gymmate.domain.repository.WorkoutSessionRepository
 
 //    GymMateViewModel depende de Repository.
 //    RepositoryImpl depende de DAO.
@@ -31,6 +35,14 @@ val appModule = module {
         get<GymMateDataBase>().exerciseDao()
     }
 
+    single<WorkoutSessionDao> {
+        get<GymMateDataBase>().workoutSessionDao()
+    }
+
+    single<WorkoutSessionExerciseDao> {
+        get<GymMateDataBase>().workoutSessionExerciseDao()
+    }
+
     //como criar o ExerciseRepository?
      //cria a implementacao, passando o exerciseDAO
     single<ExerciseRepository> {
@@ -41,12 +53,20 @@ val appModule = module {
         CategoryRepositoryImpl(dao = get())
     }
 
+    single<WorkoutSessionRepository> {
+        WorkoutSessionRepositoryImpl(
+            workoutSessionDao = get(),
+            workoutSessionExerciseDao = get()
+        )
+    }
+
     //como criar o GymMateViewModel?
      //passando category e exerciseRepository
     viewModel {
         GymMateViewModel(
             categoryRepository = get(),
-            exerciseRepository = get()
+            exerciseRepository = get(),
+            workoutSessionRepository = get()
         )
     }
     viewModel {

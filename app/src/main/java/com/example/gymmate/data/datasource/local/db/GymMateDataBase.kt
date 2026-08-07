@@ -9,14 +9,24 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.gymmate.data.datasource.local.dao.ExerciseDAO
 import com.example.gymmate.data.datasource.local.entity.CategoryEntity
 import com.example.gymmate.data.datasource.local.entity.ExerciseEntity
+import com.example.gymmate.data.datasource.local.entity.WorkoutSessionEntity
+import com.example.gymmate.data.datasource.local.entity.WorkoutSessionExerciseEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import com.example.gymmate.data.datasource.local.dao.WorkoutSessionDao
+import com.example.gymmate.data.datasource.local.dao.WorkoutSessionExerciseDao
 
-@Database(entities = [ExerciseEntity::class, CategoryEntity::class], version = 8, exportSchema = false)
+@Database(entities = [
+            ExerciseEntity::class,
+            CategoryEntity::class,
+            WorkoutSessionEntity::class,
+            WorkoutSessionExerciseEntity::class], version = 9, exportSchema = false)
 abstract class GymMateDataBase : RoomDatabase() {
 
     abstract fun exerciseDao(): ExerciseDAO
+    abstract fun workoutSessionDao(): WorkoutSessionDao
+    abstract fun workoutSessionExerciseDao(): WorkoutSessionExerciseDao
 
     companion object {
         @Volatile
@@ -29,7 +39,7 @@ abstract class GymMateDataBase : RoomDatabase() {
                     GymMateDataBase::class.java,
                     "app_database"
                 )
-                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)
@@ -109,6 +119,39 @@ abstract class GymMateDataBase : RoomDatabase() {
                             )
                     )
                     """.trimIndent()
+                )
+            }
+        }
+
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+
+                db.execSQL(
+                    """
+            CREATE TABLE IF NOT EXISTS workout_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                category TEXT NOT NULL,
+                startedAt INTEGER NOT NULL,
+                finishedAt INTEGER,
+                status TEXT NOT NULL
+            )
+            """.trimIndent()
+                )
+
+                db.execSQL(
+                    """
+            CREATE TABLE IF NOT EXISTS workout_session_exercises (
+                sessionId INTEGER NOT NULL,
+                exerciseId TEXT NOT NULL,
+                exerciseName TEXT NOT NULL,
+                sets INTEGER NOT NULL,
+                reps INTEGER NOT NULL,
+                weight REAL NOT NULL,
+                position INTEGER NOT NULL,
+                completedSets INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY(sessionId, exerciseId)
+            )
+            """.trimIndent()
                 )
             }
         }

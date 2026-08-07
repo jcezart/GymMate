@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -67,6 +68,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import androidx.compose.material.icons.filled.DragHandle
 import sh.calvin.reorderable.ReorderableItem
+import androidx.compose.material.icons.filled.History
+import androidx.compose.ui.platform.LocalLocale
+import androidx.compose.foundation.lazy.itemsIndexed
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -147,24 +151,33 @@ fun GymMateScreen(
                 )
             },
             floatingActionButton = {
-                GymMateFAB {
-                    state.selectedCategory?.let { selectedCategory ->
-                        val nextPosition = state.exercises
-                            .filter { it.category == selectedCategory }
-                            .maxOfOrNull { it.position }
-                            ?.plus(1) ?: 0
+                if (state.activeSession == null) {
+                    GymMateFAB {
+                        state.selectedCategory?.let { selectedCategory ->
 
-                        val newExercise = Exercise(
-                            id = UUID.randomUUID().toString(),
-                            exerciseName = "",
-                            sets = 0,
-                            reps = 0,
-                            weight = 0f,
-                            date = SimpleDateFormat("dd/MM", Locale.ENGLISH).format(Date()),
-                            category = selectedCategory,
-                            position = nextPosition
-                        )
-                        onAction(GymMateAction.AddExercise(newExercise))
+                            val nextPosition = state.exercises
+                                .filter { it.category == selectedCategory }
+                                .maxOfOrNull { it.position }
+                                ?.plus(1) ?: 0
+
+                            val newExercise = Exercise(
+                                id = UUID.randomUUID().toString(),
+                                exerciseName = "",
+                                sets = 0,
+                                reps = 0,
+                                weight = 0f,
+                                date = SimpleDateFormat(
+                                    "dd/MM",
+                                    Locale.ENGLISH
+                                ).format(Date()),
+                                category = selectedCategory,
+                                position = nextPosition
+                            )
+
+                            onAction(
+                                GymMateAction.AddExercise(newExercise)
+                            )
+                        }
                     }
                 }
             },
@@ -187,6 +200,7 @@ fun GymMateScreen(
                         items(state.categories) { category ->
                             Button(
                                 onClick = { onAction(GymMateAction.SelectCategory(category.name)) },
+                                enabled = state.activeSession == null,
                                 modifier = Modifier.padding(1.dp),
                                 colors = if (category.name == state.selectedCategory)
                                     ButtonDefaults.buttonColors()
@@ -206,6 +220,7 @@ fun GymMateScreen(
                                             categoryToRename = category.name
                                             showRenameDialog = true
                                         },
+                                        enabled = state.activeSession == null,
                                         modifier = Modifier
                                             .size(18.dp)
                                             .padding(start = 4.dp)
@@ -223,6 +238,7 @@ fun GymMateScreen(
                                                 categoryToDelete = category.name
                                                 showDeleteDialog = true
                                             },
+                                            enabled = state.activeSession == null,
                                             modifier = Modifier
                                                 .size(18.dp)
                                                 .padding(start = 4.dp)
@@ -241,12 +257,34 @@ fun GymMateScreen(
                         item {
                             Button(
                                 onClick = { showCategoryDialog = true },
+                                enabled = state.activeSession == null,
                                 modifier = Modifier.padding(1.dp),
                                 colors = ButtonDefaults.buttonColors()
                             ) {
                                 Text(text = "+")
                             }
                         }
+                    }
+
+                    Button(
+                        onClick = {
+                            if (state.activeSession == null) {
+                                onAction(GymMateAction.StartWorkout)
+                            } else {
+                                onAction(GymMateAction.FinishWorkout)
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = if (state.activeSession == null) {
+                                "Start Workout"
+                            } else {
+                                "Finish Workout"
+                            }
+                        )
                     }
 
                     LazyColumn(
@@ -265,18 +303,32 @@ fun GymMateScreen(
                                 key = exercise.id
                             ) { _ ->
 
+                                val sessionExercise = state.sessionExercises
+                                    .firstOrNull { it.exerciseId == exercise.id }
+
+
                                 ExerciseCard(
+                                    canEditStructure = state.activeSession == null,
                                     exercise = exercise,
+
                                     onUpdateExercise = { updatedExercise ->
                                         onAction(
                                             GymMateAction.UpdateExercise(updatedExercise)
                                         )
                                     },
+
                                     onDeleteExercise = { exerciseToDelete ->
                                         onAction(
                                             GymMateAction.DeleteExercise(exerciseToDelete)
                                         )
                                     },
+
+                                    onOpenHistory = {
+                                        onAction(
+                                            GymMateAction.OpenExerciseHistory(exercise.id)
+                                        )
+                                    },
+
                                     dragHandleModifier = Modifier.draggableHandle(
                                         onDragStopped = {
                                             onAction(
@@ -285,7 +337,19 @@ fun GymMateScreen(
                                                 )
                                             )
                                         }
-                                    )
+                                    ),
+
+                                    completedSetsFromSession = sessionExercise?.completedSets ?: 0,
+
+                                    onCompletedSetsChange = { completedSets ->
+                                        onAction(
+                                            GymMateAction.UpdateCompletedSets(
+                                                exerciseId = exercise.id,
+                                                completedSets = completedSets
+                                            )
+                                        )
+                                    }
+
                                 )
                             }
                         }
@@ -331,6 +395,117 @@ fun GymMateScreen(
             )
         }
 
+        if (state.historyExerciseId != null) {
+
+            AlertDialog(
+                onDismissRequest = {
+                    onAction(GymMateAction.CloseExerciseHistory)
+                },
+
+                title = {
+                    Text(
+                        text = state.exerciseHistory
+                            .firstOrNull()
+                            ?.exerciseName
+                            ?: "Exercise History"
+                    )
+                },
+
+                text = {
+                    Column {
+
+                        state.personalRecord?.let { record ->
+                            Text(
+                                text = "🏆 Personal Record: $record kg",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+
+                            Spacer(
+                                modifier = Modifier.height(16.dp)
+                            )
+                        }
+
+                        if (state.exerciseHistory.isEmpty()) {
+
+                            Text("No workout history yet.")
+
+                        } else {
+
+                            LazyColumn(
+                                modifier = Modifier.heightIn(
+                                    max = 400.dp
+                                )
+                            ) {
+
+                                itemsIndexed(
+                                    items = state.exerciseHistory,
+                                    key = { _, history -> history.sessionId }
+                                ) { index, history ->
+
+                                    val previousRecord = state.exerciseHistory
+                                        .drop(index + 1)
+                                        .maxOfOrNull { it.weight }
+
+                                    val brokePersonalRecord =
+                                        previousRecord != null &&
+                                                history.weight > previousRecord
+
+                                    val formattedDate =
+                                        SimpleDateFormat(
+                                            "dd/MM/yyyy",
+                                            LocalLocale.current.platformLocale
+                                        ).format(
+                                            Date(history.performedAt)
+                                        )
+
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 8.dp),
+                                        horizontalArrangement =
+                                            Arrangement.SpaceBetween
+                                    ) {
+
+                                        Column {
+
+                                            Text(
+                                                text = formattedDate
+                                            )
+
+                                            Text(
+                                                text =
+                                                    "${history.sets} sets × ${history.reps} reps"
+                                            )
+                                        }
+
+                                        Text(
+                                            text = if (brokePersonalRecord) {
+                                                "🏆 ${history.weight} kg"
+                                            } else {
+                                                "${history.weight} kg"
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onAction(
+                                GymMateAction.CloseExerciseHistory
+                            )
+                        }
+                    ) {
+                        Text("Close")
+                    }
+                }
+            )
+        }
+
         if (state.exercises.isEmpty()) {
             CustomTooltip(
                 text = "Add an exercise to start",
@@ -347,7 +522,11 @@ fun ExerciseCard(
     exercise: Exercise,
     onUpdateExercise: (Exercise) -> Unit,
     onDeleteExercise: (Exercise) -> Unit,
-    dragHandleModifier: Modifier = Modifier
+    dragHandleModifier: Modifier = Modifier,
+    completedSetsFromSession: Int = 0,
+    onCompletedSetsChange: (Int) -> Unit = {},
+    canEditStructure: Boolean = true,
+    onOpenHistory: () -> Unit,
 ) {
     //var isExpanded by remember { mutableStateOf(false) }
     var isExpanded by rememberSaveable(exercise.id) {
@@ -356,7 +535,11 @@ fun ExerciseCard(
     var showDialog by remember { mutableStateOf(false) }
 
     var completedSets by rememberSaveable(exercise.id) {
-        mutableStateOf(0)
+        mutableStateOf(completedSetsFromSession)
+    }
+
+    LaunchedEffect(completedSetsFromSession) {
+        completedSets = completedSetsFromSession
     }
 
     var exerciseName by remember { mutableStateOf(exercise.exerciseName) }
@@ -396,23 +579,37 @@ fun ExerciseCard(
                 )
                 Text(text = exercise.date)
 
-                IconButton(
-                    modifier = dragHandleModifier,
-                    onClick = {}
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.DragHandle,
-                        contentDescription = "Reorder exercise"
-                    )
-                }
+                if (canEditStructure) {
 
-                IconButton(onClick = { showDialog = true }) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(22.dp),
-                        contentDescription = "Delete Exercise"
-                    )
+                    IconButton(
+                        onClick = onOpenHistory
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.History,
+                            contentDescription = "Exercise History"
+                        )
+                    }
+
+                    IconButton(
+                        modifier = dragHandleModifier,
+                        onClick = {}
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DragHandle,
+                            contentDescription = "Reorder exercise"
+                        )
+                    }
+
+                    IconButton(
+                        onClick = { showDialog = true }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(22.dp),
+                            contentDescription = "Delete Exercise"
+                        )
+                    }
                 }
 
                 if (showDialog) {
@@ -440,7 +637,10 @@ fun ExerciseCard(
                 ) {
                     TextButton(
                         onClick = {
-                            completedSets = (completedSets - 1).coerceAtLeast(0)
+                            val newValue = (completedSets - 1).coerceAtLeast(0)
+
+                            completedSets = newValue
+                            onCompletedSetsChange(newValue)
                         },
                         enabled = completedSets > 0
                     ) {
@@ -459,8 +659,11 @@ fun ExerciseCard(
 
                     TextButton(
                         onClick = {
-                            completedSets =
+                            val newValue =
                                 (completedSets + 1).coerceAtMost(exercise.sets)
+
+                            completedSets = newValue
+                            onCompletedSetsChange(newValue)
                         },
                         enabled = completedSets < exercise.sets
                     ) {
