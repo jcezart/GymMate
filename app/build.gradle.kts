@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.juliocezar.gymmate"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 37
         versionCode = 3
         versionName = "1.0.2"

@@ -71,8 +71,111 @@ import sh.calvin.reorderable.ReorderableItem
 import androidx.compose.material.icons.filled.History
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DateRangePicker
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.rememberDateRangePickerState
+import java.time.Instant
+import java.time.Period
+import java.time.ZoneId
+import java.time.ZoneOffset
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.OutlinedButton
 
-@RequiresApi(Build.VERSION_CODES.O)
+
+
+private fun getDaysStartMillis(
+    nowMillis: Long,
+    days: Long
+): Long {
+
+    val zone = ZoneId.systemDefault()
+
+    val startDate = Instant
+        .ofEpochMilli(nowMillis)
+        .atZone(zone)
+        .toLocalDate()
+        .minusDays(days - 1)
+
+    return startDate
+        .atStartOfDay(zone)
+        .toInstant()
+        .toEpochMilli()
+}
+
+private fun getPeriodStartMillis(
+    nowMillis: Long,
+    period: Period
+): Long {
+
+    val zone = ZoneId.systemDefault()
+
+    val startDate = Instant
+        .ofEpochMilli(nowMillis)
+        .atZone(zone)
+        .toLocalDate()
+        .minus(period)
+
+    return startDate
+        .atStartOfDay(zone)
+        .toInstant()
+        .toEpochMilli()
+}
+
+private fun pickerMillisToLocalStart(
+    pickerMillis: Long
+): Long {
+
+    val localDate = Instant
+        .ofEpochMilli(pickerMillis)
+        .atZone(ZoneOffset.UTC)
+        .toLocalDate()
+
+    return localDate
+        .atStartOfDay(ZoneId.systemDefault())
+        .toInstant()
+        .toEpochMilli()
+}
+
+private fun pickerMillisToLocalEndExclusive(
+    pickerMillis: Long
+): Long {
+
+    val localDate = Instant
+        .ofEpochMilli(pickerMillis)
+        .atZone(ZoneOffset.UTC)
+        .toLocalDate()
+        .plusDays(1)
+
+    return localDate
+        .atStartOfDay(ZoneId.systemDefault())
+        .toInstant()
+        .toEpochMilli()
+}
+
+
+@OptIn(
+    ExperimentalMaterial3Api::class,
+    ExperimentalLayoutApi::class
+)
 @Composable
 fun GymMateScreen(
     state: GymMateUiState,
@@ -397,95 +500,484 @@ fun GymMateScreen(
 
         if (state.historyExerciseId != null) {
 
+            val locale = LocalLocale.current.platformLocale
+
+            var selectedPeriod by rememberSaveable(
+                state.historyExerciseId
+            ) {
+                mutableIntStateOf(1)
+            }
+
+            var showCustomPeriodDialog by rememberSaveable {
+                mutableStateOf(false)
+            }
+
+            var showDateRangePicker by rememberSaveable {
+                mutableStateOf(false)
+            }
+
+            var customStartMillis by rememberSaveable {
+                mutableLongStateOf(Long.MIN_VALUE)
+            }
+
+            var customEndExclusiveMillis by rememberSaveable {
+                mutableLongStateOf(Long.MAX_VALUE)
+            }
+
+            var customPeriodLabel by rememberSaveable {
+                mutableStateOf("All history")
+            }
+
+            val now = remember(state.historyExerciseId) {
+                System.currentTimeMillis()
+            }
+
+            val filteredHistory = remember(
+                state.exerciseHistory,
+                selectedPeriod,
+                customStartMillis,
+                customEndExclusiveMillis
+            ) {
+
+                when (selectedPeriod) {
+
+                    // 30 days
+                    0 -> {
+
+                        val cutoff = getDaysStartMillis(
+                            nowMillis = now,
+                            days = 30
+                        )
+
+                        state.exerciseHistory.filter {
+                            it.performedAt >= cutoff
+                        }
+                    }
+
+                    // 3 months
+                    1 -> {
+
+                        val cutoff =
+                            getPeriodStartMillis(
+                                nowMillis = now,
+                                period = Period.ofMonths(3)
+                            )
+
+                        state.exerciseHistory.filter {
+                            it.performedAt >= cutoff
+                        }
+                    }
+
+                    // Custom
+                    else -> {
+
+                        state.exerciseHistory.filter {
+                            it.performedAt >= customStartMillis &&
+                                    it.performedAt < customEndExclusiveMillis
+                        }
+                    }
+                }
+            }
+
             AlertDialog(
                 onDismissRequest = {
-                    onAction(GymMateAction.CloseExerciseHistory)
-                },
-
-                title = {
-                    Text(
-                        text = state.exerciseHistory
-                            .firstOrNull()
-                            ?.exerciseName
-                            ?: "Exercise History"
+                    onAction(
+                        GymMateAction.CloseExerciseHistory
                     )
                 },
 
-                text = {
+                title = {
+
                     Column {
 
+                        Text(
+                            text = state.exerciseHistory
+                                .firstOrNull()
+                                ?.exerciseName
+                                ?: "Exercise History",
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+
+                        Text(
+                            text = "Performance history",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
+
+                text = {
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .wrapContentHeight()
+                    ) {
+
+                        /*
+                         * PERSONAL RECORD
+                         */
+
                         state.personalRecord?.let { record ->
-                            Text(
-                                text = "🏆 Personal Record: $record kg",
-                                style = MaterialTheme.typography.titleMedium
-                            )
+
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor =
+                                        MaterialTheme.colorScheme.tertiaryContainer
+                                )
+                            ) {
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    verticalAlignment =
+                                        Alignment.CenterVertically
+                                ) {
+
+                                    Icon(
+                                        imageVector =
+                                            Icons.Default.EmojiEvents,
+                                        contentDescription =
+                                            "Personal Record",
+                                        tint =
+                                            MaterialTheme.colorScheme
+                                                .onTertiaryContainer
+                                    )
+
+                                    Spacer(
+                                        modifier = Modifier.width(12.dp)
+                                    )
+
+                                    Column {
+
+                                        Text(
+                                            text = "PERSONAL RECORD",
+                                            style =
+                                                MaterialTheme.typography.labelMedium,
+                                            color =
+                                                MaterialTheme.colorScheme
+                                                    .onTertiaryContainer
+                                        )
+
+                                        Text(
+                                            text = String.format(
+                                                locale,
+                                                "%.1f kg",
+                                                record
+                                            ),
+                                            style =
+                                                MaterialTheme.typography.headlineMedium,
+                                            color =
+                                                MaterialTheme.colorScheme
+                                                    .onTertiaryContainer
+                                        )
+
+                                        Text(
+                                            text = "Highest weight recorded",
+                                            style =
+                                                MaterialTheme.typography.bodySmall,
+                                            color =
+                                                MaterialTheme.colorScheme
+                                                    .onTertiaryContainer
+                                        )
+                                    }
+                                }
+                            }
 
                             Spacer(
-                                modifier = Modifier.height(16.dp)
+                                modifier = Modifier.height(20.dp)
                             )
                         }
 
-                        if (state.exerciseHistory.isEmpty()) {
 
-                            Text("No workout history yet.")
+                        /*
+                         * PERIOD FILTER
+                         */
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement =
+                                Arrangement.spacedBy(8.dp)
+                        ) {
+
+                            FilterChip(
+                                selected = selectedPeriod == 0,
+                                onClick = {
+                                    selectedPeriod = 0
+                                },
+                                label = {
+                                    Text("30 days")
+                                }
+                            )
+
+                            FilterChip(
+                                selected = selectedPeriod == 1,
+                                onClick = {
+                                    selectedPeriod = 1
+                                },
+                                label = {
+                                    Text("3 months")
+                                }
+                            )
+
+                            FilterChip(
+                                selected = selectedPeriod == 2,
+                                onClick = {
+                                    showCustomPeriodDialog = true
+                                },
+                                label = {
+                                    Text("Custom")
+                                }
+                            )
+                        }
+
+                        if (selectedPeriod == 2) {
+
+                            Spacer(
+                                modifier = Modifier.height(4.dp)
+                            )
+
+                            Text(
+                                text = customPeriodLabel,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Spacer(
+                            modifier = Modifier.height(16.dp)
+                        )
+
+
+                        /*
+                         * HISTORY HEADER
+                         */
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement =
+                                Arrangement.SpaceBetween,
+                            verticalAlignment =
+                                Alignment.CenterVertically
+                        ) {
+
+                            Text(
+                                text = "HISTORY",
+                                style = MaterialTheme.typography.labelMedium,
+                                color =
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Text(
+                                text =
+                                    "${filteredHistory.size} " +
+                                            if (filteredHistory.size == 1) {
+                                                "WORKOUT"
+                                            } else {
+                                                "WORKOUTS"
+                                            },
+                                style = MaterialTheme.typography.labelSmall,
+                                color =
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Spacer(
+                            modifier = Modifier.height(8.dp)
+                        )
+
+
+                        /*
+                         * HISTORY LIST
+                         */
+
+                        if (filteredHistory.isEmpty()) {
+
+                            Text(
+                                text = "No workouts found in this period.",
+                                modifier =
+                                    Modifier.padding(vertical = 24.dp),
+                                style =
+                                    MaterialTheme.typography.bodyMedium,
+                                color =
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                            )
 
                         } else {
 
                             LazyColumn(
                                 modifier = Modifier.heightIn(
-                                    max = 400.dp
+                                    max = 320.dp
                                 )
                             ) {
 
-                                itemsIndexed(
-                                    items = state.exerciseHistory,
-                                    key = { _, history -> history.sessionId }
-                                ) { index, history ->
+                                items(
+                                    items = filteredHistory,
+                                    key = {
+                                        it.sessionId
+                                    }
+                                ) { history ->
 
-                                    val previousRecord = state.exerciseHistory
-                                        .drop(index + 1)
-                                        .maxOfOrNull { it.weight }
+                                    /*
+                                     * Usa o histórico COMPLETO para saber
+                                     * se naquele treino realmente houve PR.
+                                     *
+                                     * Assim o filtro não interfere
+                                     * no cálculo.
+                                     */
+
+                                    val originalIndex =
+                                        state.exerciseHistory
+                                            .indexOfFirst {
+                                                it.sessionId ==
+                                                        history.sessionId
+                                            }
+
+                                    val previousRecord =
+                                        if (originalIndex >= 0) {
+
+                                            state.exerciseHistory
+                                                .drop(originalIndex + 1)
+                                                .maxOfOrNull {
+                                                    it.weight
+                                                }
+
+                                        } else {
+                                            null
+                                        }
 
                                     val brokePersonalRecord =
                                         previousRecord != null &&
-                                                history.weight > previousRecord
+                                                history.weight >
+                                                previousRecord
+
 
                                     val formattedDate =
                                         SimpleDateFormat(
-                                            "dd/MM/yyyy",
-                                            LocalLocale.current.platformLocale
-                                        ).format(
-                                            Date(history.performedAt)
+                                            "dd MMM yyyy",
+                                            locale
                                         )
+                                            .format(
+                                                Date(
+                                                    history.performedAt
+                                                )
+                                            )
+                                            .uppercase(locale)
 
-                                    Row(
+
+                                    Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(vertical = 8.dp),
-                                        horizontalArrangement =
-                                            Arrangement.SpaceBetween
+                                            .padding(
+                                                vertical = 12.dp
+                                            )
                                     ) {
 
-                                        Column {
+                                        Row(
+                                            modifier =
+                                                Modifier.fillMaxWidth(),
+                                            horizontalArrangement =
+                                                Arrangement.SpaceBetween,
+                                            verticalAlignment =
+                                                Alignment.CenterVertically
+                                        ) {
 
                                             Text(
-                                                text = formattedDate
+                                                text = formattedDate,
+                                                style =
+                                                    MaterialTheme.typography
+                                                        .labelMedium,
+                                                color =
+                                                    MaterialTheme.colorScheme
+                                                        .onSurfaceVariant
                                             )
 
                                             Text(
-                                                text =
-                                                    "${history.sets} sets × ${history.reps} reps"
+                                                text = String.format(
+                                                    locale,
+                                                    "%.1f kg",
+                                                    history.weight
+                                                ),
+                                                style =
+                                                    MaterialTheme.typography
+                                                        .titleMedium
                                             )
                                         }
 
-                                        Text(
-                                            text = if (brokePersonalRecord) {
-                                                "🏆 ${history.weight} kg"
-                                            } else {
-                                                "${history.weight} kg"
-                                            }
+                                        Spacer(
+                                            modifier =
+                                                Modifier.height(4.dp)
                                         )
+
+                                        Row(
+                                            modifier =
+                                                Modifier.fillMaxWidth(),
+                                            horizontalArrangement =
+                                                Arrangement.SpaceBetween,
+                                            verticalAlignment =
+                                                Alignment.CenterVertically
+                                        ) {
+
+                                            Text(
+                                                text =
+                                                    "${history.sets} sets × " +
+                                                            "${history.reps} reps",
+                                                style =
+                                                    MaterialTheme.typography
+                                                        .bodyMedium,
+                                                color =
+                                                    MaterialTheme.colorScheme
+                                                        .onSurfaceVariant
+                                            )
+
+                                            if (brokePersonalRecord) {
+
+                                                Row(
+                                                    verticalAlignment =
+                                                        Alignment.CenterVertically
+                                                ) {
+
+                                                    Icon(
+                                                        imageVector =
+                                                            Icons.Default
+                                                                .EmojiEvents,
+                                                        contentDescription =
+                                                            "New Personal Record",
+                                                        modifier =
+                                                            Modifier.size(16.dp),
+                                                        tint =
+                                                            MaterialTheme
+                                                                .colorScheme
+                                                                .tertiary
+                                                    )
+
+                                                    Spacer(
+                                                        modifier =
+                                                            Modifier.width(4.dp)
+                                                    )
+
+                                                    Text(
+                                                        text = "NEW PR",
+                                                        style =
+                                                            MaterialTheme.typography
+                                                                .labelMedium,
+                                                        color =
+                                                            MaterialTheme
+                                                                .colorScheme
+                                                                .tertiary
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
+
+                                    HorizontalDivider(
+                                        color =
+                                            MaterialTheme.colorScheme
+                                                .outlineVariant
+                                    )
                                 }
                             }
                         }
@@ -493,6 +985,7 @@ fun GymMateScreen(
                 },
 
                 confirmButton = {
+
                     TextButton(
                         onClick = {
                             onAction(
@@ -504,6 +997,342 @@ fun GymMateScreen(
                     }
                 }
             )
+
+            if (showCustomPeriodDialog) {
+
+                fun selectQuickDays(
+                    days: Long,
+                    label: String
+                ) {
+                    customStartMillis =
+                        getDaysStartMillis(
+                            nowMillis = now,
+                            days = days
+                        )
+
+                    customEndExclusiveMillis = now + 1
+
+                    customPeriodLabel = label
+                    selectedPeriod = 2
+                    showCustomPeriodDialog = false
+                }
+
+                fun selectQuickPeriod(
+                    period: Period,
+                    label: String
+                ) {
+                    customStartMillis =
+                        getPeriodStartMillis(
+                            nowMillis = now,
+                            period = period
+                        )
+
+                    customEndExclusiveMillis = now + 1
+
+                    customPeriodLabel = label
+                    selectedPeriod = 2
+                    showCustomPeriodDialog = false
+                }
+
+                AlertDialog(
+                    onDismissRequest = {
+                        showCustomPeriodDialog = false
+                    },
+
+                    title = {
+                        Column {
+                            Text(
+                                text = "Custom period",
+                                style = MaterialTheme.typography.headlineSmall
+                            )
+
+                            Spacer(
+                                modifier = Modifier.height(4.dp)
+                            )
+
+                            Text(
+                                text = "Choose a quick range or select specific dates.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+
+                    text = {
+                        Column(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+
+                            Text(
+                                text = "QUICK RANGES",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Spacer(
+                                modifier = Modifier.height(10.dp)
+                            )
+
+                            FlowRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+
+                                AssistChip(
+                                    onClick = {
+                                        selectQuickDays(
+                                            days = 7,
+                                            "Last 7 days"
+                                        )
+                                    },
+                                    label = {
+                                        Text("7 days")
+                                    }
+                                )
+
+                                AssistChip(
+                                    onClick = {
+                                        selectQuickDays(
+                                            days = 15,
+                                            "Last 15 days"
+                                        )
+                                    },
+                                    label = {
+                                        Text("15 days")
+                                    }
+                                )
+
+                                AssistChip(
+                                    onClick = {
+                                        selectQuickPeriod(
+                                            Period.ofMonths(1),
+                                            "Last month"
+                                        )
+                                    },
+                                    label = {
+                                        Text("1 month")
+                                    }
+                                )
+
+                                AssistChip(
+                                    onClick = {
+                                        selectQuickPeriod(
+                                            Period.ofMonths(2),
+                                            "Last 2 months"
+                                        )
+                                    },
+                                    label = {
+                                        Text("2 months")
+                                    }
+                                )
+
+                                AssistChip(
+                                    onClick = {
+                                        selectQuickPeriod(
+                                            Period.ofMonths(6),
+                                            "Last 6 months"
+                                        )
+                                    },
+                                    label = {
+                                        Text("6 months")
+                                    }
+                                )
+
+                                AssistChip(
+                                    onClick = {
+                                        selectQuickPeriod(
+                                            Period.ofYears(1),
+                                            "Last year"
+                                        )
+                                    },
+                                    label = {
+                                        Text("1 year")
+                                    }
+                                )
+                            }
+
+                            Spacer(
+                                modifier = Modifier.height(20.dp)
+                            )
+
+                            HorizontalDivider()
+
+                            Spacer(
+                                modifier = Modifier.height(16.dp)
+                            )
+
+                            OutlinedButton(
+                                onClick = {
+                                    customStartMillis = Long.MIN_VALUE
+                                    customEndExclusiveMillis = Long.MAX_VALUE
+
+                                    customPeriodLabel = "All history"
+                                    selectedPeriod = 2
+
+                                    showCustomPeriodDialog = false
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+
+                                Icon(
+                                    imageVector = Icons.Default.History,
+                                    contentDescription = null
+                                )
+
+                                Spacer(
+                                    modifier = Modifier.width(8.dp)
+                                )
+
+                                Text("All history")
+                            }
+
+                            Spacer(
+                                modifier = Modifier.height(8.dp)
+                            )
+
+                            Button(
+                                onClick = {
+                                    showCustomPeriodDialog = false
+                                    showDateRangePicker = true
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+
+                                Icon(
+                                    imageVector = Icons.Default.CalendarMonth,
+                                    contentDescription = null
+                                )
+
+                                Spacer(
+                                    modifier = Modifier.width(8.dp)
+                                )
+
+                                Text("Choose dates")
+                            }
+                        }
+                    },
+
+                    confirmButton = {},
+
+                    dismissButton = {
+                        TextButton(
+                            onClick = {
+                                showCustomPeriodDialog = false
+                            }
+                        ) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            }
+
+            if (showDateRangePicker) {
+
+                val dateRangePickerState =
+                    rememberDateRangePickerState()
+
+                DatePickerDialog(
+                    onDismissRequest = {
+
+                        showDateRangePicker = false
+                        showCustomPeriodDialog = true
+                    },
+
+                    confirmButton = {
+
+                        val start =
+                            dateRangePickerState
+                                .selectedStartDateMillis
+
+                        val end =
+                            dateRangePickerState
+                                .selectedEndDateMillis
+
+                        TextButton(
+                            enabled =
+                                start != null &&
+                                        end != null,
+
+                            onClick = {
+
+                                if (
+                                    start != null &&
+                                    end != null
+                                ) {
+
+                                    val localStart =
+                                        pickerMillisToLocalStart(
+                                            start
+                                        )
+
+                                    val localEnd =
+                                        pickerMillisToLocalStart(
+                                            end
+                                        )
+
+                                    customStartMillis =
+                                        localStart
+
+                                    customEndExclusiveMillis =
+                                        pickerMillisToLocalEndExclusive(
+                                            end
+                                        )
+
+                                    val formatter =
+                                        SimpleDateFormat(
+                                            "dd/MM/yyyy",
+                                            locale
+                                        )
+
+                                    customPeriodLabel =
+                                        "${formatter.format(Date(localStart))} - " +
+                                                formatter.format(Date(localEnd))
+
+                                    selectedPeriod = 2
+
+                                    showDateRangePicker =
+                                        false
+                                }
+                            }
+                        ) {
+                            Text("Apply")
+                        }
+                    },
+
+                    dismissButton = {
+
+                        TextButton(
+                            onClick = {
+
+                                showDateRangePicker = false
+                                showCustomPeriodDialog = true
+                            }
+                        ) {
+                            Text("Cancel")
+                        }
+                    }
+                ) {
+
+                    DateRangePicker(
+                        state = dateRangePickerState,
+                        title = {
+                            Text(
+                                text = "Select date range",
+                                modifier = Modifier.padding(
+                                    start = 24.dp,
+                                    top = 16.dp
+                                )
+                            )
+                        },
+                        showModeToggle = false,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(500.dp)
+                            .padding(16.dp)
+                    )
+                }
+            }
         }
 
         if (state.exercises.isEmpty()) {
