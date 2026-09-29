@@ -13,6 +13,7 @@ roomCompiler = "2.8.4"
 koin = "4.2.2"
 ksp = "2.3.10"
 reorderable = "3.1.0"
+billing = "9.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -41,6 +42,7 @@ koin-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = 
 compose-material-icons-core = { module = "androidx.compose.material:material-icons-core" }
 compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended"}
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
+android-billing = { module = "com.android.billingclient:billing-ktx", version.ref = "billing" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
