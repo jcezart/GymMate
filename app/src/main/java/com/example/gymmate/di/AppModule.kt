@@ -15,6 +15,10 @@ import com.example.gymmate.data.datasource.local.dao.WorkoutSessionDao
 import com.example.gymmate.data.datasource.local.dao.WorkoutSessionExerciseDao
 import com.example.gymmate.data.repository.WorkoutSessionRepositoryImpl
 import com.example.gymmate.domain.repository.WorkoutSessionRepository
+import com.example.gymmate.billing.BillingRepository
+import com.example.gymmate.billing.GooglePlayBillingRepository
+import com.example.gymmate.billing.PremiumViewModel
+
 
 //    GymMateViewModel depende de Repository.
 //    RepositoryImpl depende de DAO.
@@ -60,6 +64,10 @@ val appModule = module {
         )
     }
 
+    single<BillingRepository> {
+        GooglePlayBillingRepository(androidContext())
+    }
+
     //como criar o GymMateViewModel?
      //passando category e exerciseRepository
     viewModel {
@@ -71,6 +79,9 @@ val appModule = module {
     }
     viewModel {
         RestTimerViewModel()
+    }
+    viewModel {
+        PremiumViewModel(get())
     }
 
 }
